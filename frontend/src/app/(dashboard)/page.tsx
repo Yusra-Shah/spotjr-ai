@@ -1,30 +1,68 @@
-import { LayoutDashboard } from 'lucide-react'
+import MallDigitalTwin from '@/components/map/MallDigitalTwin'
+import ActiveCasePanel from '@/components/case/ActiveCasePanel'
+import CCTVGrid from '@/components/cctv/CCTVGrid'
+import AIReasoningTimeline from '@/components/ai/AIReasoningTimeline'
+import SystemHealthMonitor from '@/components/layout/SystemHealthMonitor'
+import { mockCase, mockCameras, mockTimeline } from '@/lib/mock-data'
 
 export default function CommandCenterPage() {
   return (
-    <div style={{ padding: 32 }}>
-      <div className="flex items-center gap-3" style={{ marginBottom: 8 }}>
-        <LayoutDashboard size={20} style={{ color: 'var(--color-brand-cyan)' }} />
-        <h1 style={{ fontSize: 24, fontWeight: 700, color: 'var(--color-text-primary)', margin: 0 }}>
-          Command Center
-        </h1>
-      </div>
-      <p style={{ color: 'var(--color-text-secondary)', fontSize: 13, margin: 0 }}>
-        Real-time overview of active cases, camera feeds, guard positions, and AI intelligence.
-      </p>
-
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100%',
+        overflow: 'hidden',
+        background: 'var(--color-bg-base)',
+      }}
+    >
+      {/* ── Main Content Row ── */}
       <div
         style={{
-          marginTop: 32,
-          padding: 24,
-          border: '1px dashed var(--color-border-default)',
-          borderRadius: 8,
-          color: 'var(--color-text-muted)',
-          fontSize: 13,
-          textAlign: 'center',
+          display: 'flex',
+          flex: 1,
+          overflow: 'hidden',
+          minHeight: 0,
         }}
       >
-        Dashboard panels coming in next build phase.
+        {/* Left: CCTV Grid (320px) */}
+        <CCTVGrid cameras={mockCameras} activeCase={mockCase} />
+
+        {/* Center: Mall Digital Twin (fills remaining space) */}
+        <div
+          style={{
+            flex: 1,
+            overflow: 'hidden',
+            position: 'relative',
+            background: 'var(--color-bg-base)',
+          }}
+        >
+          <MallDigitalTwin />
+        </div>
+
+        {/* Right: Active Case Intelligence (380px) */}
+        <ActiveCasePanel activeCase={mockCase} />
+      </div>
+
+      {/* ── Bottom Strip (160px) ── */}
+      <div
+        style={{
+          height: 160,
+          flexShrink: 0,
+          display: 'flex',
+          borderTop: '1px solid var(--color-border-subtle)',
+          overflow: 'hidden',
+        }}
+      >
+        {/* AI Timeline: 60% */}
+        <div style={{ flex: '0 0 60%', overflow: 'hidden' }}>
+          <AIReasoningTimeline events={mockTimeline} />
+        </div>
+
+        {/* System Health: 40% */}
+        <div style={{ flex: '0 0 40%', overflow: 'hidden' }}>
+          <SystemHealthMonitor />
+        </div>
       </div>
     </div>
   )
