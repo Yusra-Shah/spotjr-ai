@@ -1,0 +1,17 @@
+fastapi
+uvicorn
+python-dotenv
+azure-ai-vision-imageanalysis
+azure-ai-projects
+azure-identity
+azure-storage-blob
+python-jose
+passlib
+python-multipart
+opencv-python-headless
+networkx
+Pillow
+websockets
+pydantic
+httpx
+pydantic-settings

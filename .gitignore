@@ -1,0 +1,27 @@
+# Environment
+.env
+.env.local
+*.env
+
+# Node
+node_modules/
+.next/
+dist/
+
+# Python
+__pycache__/
+.venv/
+*.pyc
+*.pyo
+*.pyd
+
+# Secrets
+*.key
+*.pem
+
+# Media data
+data/videos/*.mp4
+data/videos/*.avi
+
+# Docs
+docs/
