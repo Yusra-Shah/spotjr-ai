@@ -1,8 +1,22 @@
+'use client'
+
+import { useState } from 'react'
 import Link from 'next/link'
 import { CheckCircle } from 'lucide-react'
 import { mockCase } from '@/lib/mock-data'
 
+const REUNITED_OPTIONS = [
+  'Parent/guardian on-site',
+  'Handed to security desk',
+  'Other',
+]
+
 export default function GuardCompletePage() {
+  const [reunited, setReunited] = useState(REUNITED_OPTIONS[0])
+  const [notes, setNotes] = useState('')
+  const now = new Date()
+  const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+
   return (
     <div
       style={{
@@ -10,15 +24,38 @@ export default function GuardCompletePage() {
         background: 'var(--color-bg-base)',
         maxWidth: 390,
         margin: '0 auto',
-        padding: 24,
+        padding: '20px 20px 32px',
         display: 'flex',
         flexDirection: 'column',
         gap: 20,
       }}
     >
-      <div style={{ textAlign: 'center', paddingTop: 24 }}>
-        <CheckCircle size={48} style={{ color: 'var(--color-status-online)', margin: '0 auto 16px' }} />
-        <h1 style={{ fontSize: 24, fontWeight: 800, color: 'var(--color-status-online)', margin: '0 0 4px' }}>
+      {/* Recovery header */}
+      <div style={{ textAlign: 'center', paddingTop: 20 }}>
+        <div
+          style={{
+            width: 72,
+            height: 72,
+            borderRadius: '50%',
+            background: 'rgba(16,185,129,0.12)',
+            border: '2px solid var(--color-risk-low)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            margin: '0 auto 16px',
+          }}
+        >
+          <CheckCircle size={36} style={{ color: 'var(--color-risk-low)' }} />
+        </div>
+        <h1
+          style={{
+            fontSize: 28,
+            fontWeight: 800,
+            color: 'var(--color-risk-low)',
+            margin: '0 0 6px',
+            letterSpacing: '-0.01em',
+          }}
+        >
           CHILD RECOVERED
         </h1>
         <div style={{ color: 'var(--color-text-muted)', fontFamily: 'monospace', fontSize: 12 }}>
@@ -26,92 +63,144 @@ export default function GuardCompletePage() {
         </div>
       </div>
 
-      <div className="card">
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+      {/* Recovery details */}
+      <div
+        style={{
+          background: 'var(--color-bg-elevated)',
+          border: '1px solid var(--color-border-default)',
+          borderRadius: 12,
+          padding: 16,
+        }}
+      >
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
           {[
             { label: 'Recovery Location', value: 'Gate B, Parking Level 1' },
-            { label: 'Recovery Time', value: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) },
+            { label: 'Recovery Time', value: timeStr },
             { label: 'Response Time', value: '5 min 12 sec' },
             { label: 'Case ID', value: mockCase.id },
           ].map(({ label, value }) => (
             <div key={label}>
-              <div style={{ fontSize: 10, color: 'var(--color-text-muted)', letterSpacing: '0.08em', marginBottom: 2 }}>
+              <div style={{ fontSize: 10, color: 'var(--color-text-muted)', letterSpacing: '0.08em', marginBottom: 3 }}>
                 {label.toUpperCase()}
               </div>
-              <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-text-primary)' }}>
-                {value}
-              </div>
+              <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--color-text-primary)' }}>{value}</div>
             </div>
           ))}
         </div>
       </div>
 
-      <div className="card">
-        <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginBottom: 12 }}>
+      {/* Reunited with */}
+      <div
+        style={{
+          background: 'var(--color-bg-elevated)',
+          border: '1px solid var(--color-border-default)',
+          borderRadius: 12,
+          padding: 16,
+        }}
+      >
+        <div style={{ fontSize: 15, color: 'var(--color-text-primary)', fontWeight: 600, marginBottom: 12 }}>
           Reunited with:
         </div>
-        {['Parent/guardian on-site', 'Handed to security desk', 'Other'].map((option, i) => (
+        {REUNITED_OPTIONS.map((option) => (
           <label
             key={option}
             style={{
               display: 'flex',
               alignItems: 'center',
-              gap: 10,
-              padding: '8px 0',
+              gap: 12,
+              padding: '10px 0',
+              borderBottom: option !== 'Other' ? '1px solid var(--color-border-subtle)' : 'none',
               cursor: 'pointer',
-              color: 'var(--color-text-secondary)',
-              fontSize: 13,
             }}
           >
-            <input type="radio" name="reunited" defaultChecked={i === 0} style={{ accentColor: 'var(--color-brand-cyan)' }} />
-            {option}
+            <div
+              onClick={() => setReunited(option)}
+              style={{
+                width: 20,
+                height: 20,
+                borderRadius: '50%',
+                border: `2px solid ${reunited === option ? 'var(--color-brand-cyan)' : 'var(--color-border-default)'}`,
+                background: reunited === option ? 'rgba(6,182,212,0.15)' : 'transparent',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+                cursor: 'pointer',
+              }}
+            >
+              {reunited === option && (
+                <div
+                  style={{
+                    width: 8,
+                    height: 8,
+                    borderRadius: '50%',
+                    background: 'var(--color-brand-cyan)',
+                  }}
+                />
+              )}
+            </div>
+            <span style={{ fontSize: 16, color: 'var(--color-text-secondary)' }}>{option}</span>
           </label>
         ))}
       </div>
 
-      <div className="card">
-        <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginBottom: 8 }}>
+      {/* Notes */}
+      <div
+        style={{
+          background: 'var(--color-bg-elevated)',
+          border: '1px solid var(--color-border-default)',
+          borderRadius: 12,
+          padding: 16,
+        }}
+      >
+        <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--color-text-primary)', marginBottom: 10 }}>
           Notes (optional):
         </div>
         <textarea
           rows={3}
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
           placeholder="Any additional notes..."
           style={{
             width: '100%',
             background: 'var(--color-bg-inset)',
             border: '1px solid var(--color-border-default)',
-            borderRadius: 6,
+            borderRadius: 8,
             padding: '10px 12px',
             color: 'var(--color-text-primary)',
-            fontSize: 13,
+            fontSize: 15,
             resize: 'none',
             outline: 'none',
             fontFamily: 'inherit',
+            lineHeight: 1.5,
           }}
         />
       </div>
 
-      <Link href="/guard/alert" style={{ textDecoration: 'none', marginTop: 'auto' }}>
-        <button
-          style={{
-            width: '100%',
-            background: 'var(--gradient-btn-success)',
-            color: '#fff',
-            fontSize: 16,
-            fontWeight: 800,
-            padding: '18px',
-            borderRadius: 10,
-            border: 'none',
-            cursor: 'pointer',
-          }}
-        >
-          SUBMIT REPORT
-        </button>
-      </Link>
-
-      <p style={{ textAlign: 'center', color: 'var(--color-text-muted)', fontSize: 12, margin: 0 }}>
-        Thank you, Guard Reza.
-      </p>
+      {/* Submit */}
+      <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <Link href="/guard/alert" style={{ textDecoration: 'none' }}>
+          <button
+            style={{
+              width: '100%',
+              height: 64,
+              background: 'var(--gradient-btn-success)',
+              color: '#fff',
+              fontSize: 18,
+              fontWeight: 800,
+              borderRadius: 12,
+              border: 'none',
+              cursor: 'pointer',
+              letterSpacing: '0.04em',
+            }}
+          >
+            SUBMIT REPORT
+          </button>
+        </Link>
+        <p style={{ textAlign: 'center', color: 'var(--color-text-muted)', fontSize: 14, margin: 0, paddingTop: 4 }}>
+          Thank you, Guard Reza.
+        </p>
+      </div>
     </div>
   )
 }
