@@ -7,6 +7,8 @@ import MallDigitalTwin from '@/components/map/MallDigitalTwin'
 import RiskScoreIndicator from '@/components/case/RiskScoreIndicator'
 import AIReasoningTimeline from '@/components/ai/AIReasoningTimeline'
 import { mockCase, mockTimeline, mockGuards } from '@/lib/mock-data'
+import { getCase, createCaseWebSocket } from '@/lib/api'
+import type { Case, TimelineEvent } from '@/lib/types'
 
 // ── Detection Match Card ──────────────────────────────────────────────────────
 interface DetectionMatch {
@@ -70,7 +72,6 @@ function DetectionMatchCard({
           <div style={{ marginBottom: 2 }}>[CCTV FEED]</div>
           <div>{match.cameraId}</div>
         </div>
-        {/* Bounding box overlay */}
         {match.status !== 'rejected' && (
           <div
             style={{
@@ -86,7 +87,6 @@ function DetectionMatchCard({
             }}
           />
         )}
-        {/* Camera ID badge */}
         <div
           style={{
             position: 'absolute',
@@ -102,7 +102,6 @@ function DetectionMatchCard({
         >
           {match.cameraId}
         </div>
-        {/* Time badge */}
         <div
           style={{
             position: 'absolute',
@@ -126,7 +125,6 @@ function DetectionMatchCard({
           {match.zone}
         </div>
 
-        {/* Confidence bar */}
         <div style={{ marginBottom: 8 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
             <span style={{ fontSize: 9, color: 'var(--color-text-muted)' }}>Confidence</span>
@@ -153,7 +151,6 @@ function DetectionMatchCard({
           </div>
         </div>
 
-        {/* Action buttons or status */}
         {match.status === 'pending' ? (
           <div style={{ display: 'flex', gap: 5 }}>
             <button
@@ -243,13 +240,46 @@ function useElapsed(start: string) {
 }
 
 // ── Main page ─────────────────────────────────────────────────────────────────
-export default function CaseDetailPage() {
+export default function CaseDetailPage({ params }: { params: { id: string } }) {
+  const caseId = params.id
+
+  // ── State ─────────────────────────────────────────────────────────────────
+  const [caseData, setCaseData] = useState<Case>(mockCase)
+  const [timeline, setTimeline] = useState<TimelineEvent[]>(mockTimeline)
+  const [wsConnected, setWsConnected] = useState(false)
+  const [wsReconnecting, setWsReconnecting] = useState(false)
+  const [liveRiskScore, setLiveRiskScore] = useState(mockCase.riskScore)
   const [matches, setMatches] = useState<DetectionMatch[]>(INITIAL_MATCHES)
   const [marked, setMarked] = useState(false)
 
-  const elapsed = useElapsed(mockCase.reportedAt)
+  // ── Custom hooks (called unconditionally) ─────────────────────────────────
+  const elapsed = useElapsed(caseData.reportedAt)
   const etaDisplay = useEtaCountdown(mockGuards[0].eta ?? 120)
   const reza = mockGuards[0]
+
+  // ── WebSocket event handler ───────────────────────────────────────────────
+  const handleWsEvent = useCallback((raw: unknown) => {
+    try {
+      const msg = raw as { type: string; data: Record<string, unknown> }
+      if (msg.type === 'detection' && msg.data) {
+        const d = msg.data
+        const conf = typeof d.confidence === 'number' ? d.confidence : 0
+        const event: TimelineEvent = {
+          id: `WS-${Date.now()}-${Math.random().toString(36).slice(2, 5)}`,
+          type: 'detection',
+          timestamp: (d.timestamp as string) || new Date().toISOString(),
+          title: `${d.camera_id} Live Detection`,
+          description: `Confidence: ${Math.round(conf * 100)}% — Zone: ${d.zone}`,
+          cameraId: d.camera_id as string,
+          confidence: Math.round(conf * 100),
+        }
+        setTimeline((prev) => [...prev, event])
+        if (typeof d.risk_delta === 'number') {
+          setLiveRiskScore((prev) => Math.min(100, prev + (d.risk_delta as number)))
+        }
+      }
+    } catch (_) {}
+  }, [])
 
   const handleConfirm = useCallback((id: string) => {
     setMatches((prev) => prev.map((m) => (m.id === id ? { ...m, status: 'confirmed' as const } : m)))
@@ -259,6 +289,56 @@ export default function CaseDetailPage() {
     setMatches((prev) => prev.map((m) => (m.id === id ? { ...m, status: 'rejected' as const } : m)))
   }, [])
 
+  // ── Fetch case data on mount ──────────────────────────────────────────────
+  useEffect(() => {
+    getCase(caseId)
+      .then((data) => {
+        setCaseData({
+          id: data.case_id,
+          childAlias: data.case_id,
+          childAge: mockCase.childAge,
+          clothingDescription: mockCase.clothingDescription,
+          lastSeenZone: mockCase.lastSeenZone,
+          reportedAt: (data as unknown as { created_at?: string }).created_at || mockCase.reportedAt,
+          riskScore: data.risk_score?.score ?? mockCase.riskScore,
+          riskLevel: (data.risk_score?.level as Case['riskLevel']) ?? mockCase.riskLevel,
+          status: (data.status as Case['status']) ?? mockCase.status,
+          matchConfidence: mockCase.matchConfidence,
+        })
+        setLiveRiskScore(data.risk_score?.score ?? mockCase.riskScore)
+      })
+      .catch(() => {
+        // Backend not running — keep mock data
+      })
+  }, [caseId])
+
+  // ── WebSocket connection ──────────────────────────────────────────────────
+  useEffect(() => {
+    const ws = createCaseWebSocket(caseId, handleWsEvent)
+
+    ws.onopen = () => {
+      setWsConnected(true)
+      setWsReconnecting(false)
+    }
+
+    ws.onclose = () => {
+      setWsConnected(false)
+      setWsReconnecting(true)
+    }
+
+    const origError = ws.onerror
+    ws.onerror = (e) => {
+      origError?.call(ws, e)
+      setWsConnected(false)
+      setWsReconnecting(true)
+    }
+
+    return () => {
+      ws.close()
+    }
+  }, [caseId, handleWsEvent])
+
+  // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div
       style={{
@@ -299,7 +379,7 @@ export default function CaseDetailPage() {
         <ChevronRight size={12} style={{ color: 'var(--color-text-muted)' }} />
 
         <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--color-text-primary)', fontFamily: 'monospace' }}>
-          {mockCase.id}
+          {caseData.id}
         </span>
 
         <span
@@ -334,6 +414,45 @@ export default function CaseDetailPage() {
             {elapsed}
           </span>
           <span style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>elapsed</span>
+        </div>
+
+        {/* WebSocket connection indicator */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginLeft: 4 }}>
+          {wsConnected ? (
+            <>
+              <span
+                style={{
+                  width: 7,
+                  height: 7,
+                  borderRadius: '50%',
+                  background: 'var(--color-status-online)',
+                  display: 'inline-block',
+                  boxShadow: '0 0 6px rgba(16,185,129,0.6)',
+                  flexShrink: 0,
+                }}
+              />
+              <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--color-status-online)', letterSpacing: '0.08em' }}>
+                LIVE
+              </span>
+            </>
+          ) : wsReconnecting ? (
+            <>
+              <span
+                style={{
+                  width: 7,
+                  height: 7,
+                  borderRadius: '50%',
+                  background: 'var(--color-status-warning)',
+                  display: 'inline-block',
+                  animation: 'pulse 1s ease-in-out infinite',
+                  flexShrink: 0,
+                }}
+              />
+              <span style={{ fontSize: 10, fontWeight: 600, color: 'var(--color-status-warning)' }}>
+                Reconnecting...
+              </span>
+            </>
+          ) : null}
         </div>
 
         <div style={{ flex: 1 }} />
@@ -421,7 +540,6 @@ export default function CaseDetailPage() {
             ))}
           </div>
 
-          {/* AI scanning footer */}
           <div
             style={{
               marginTop: 'auto',
@@ -475,8 +593,8 @@ export default function CaseDetailPage() {
           <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 16 }}>
             {/* Risk Score */}
             <RiskScoreIndicator
-              score={mockCase.riskScore}
-              level={mockCase.riskLevel}
+              score={liveRiskScore}
+              level={caseData.riskLevel}
               reason="Child near exit gate without adult accompaniment for 14+ minutes"
               trend="increasing"
             />
@@ -502,7 +620,7 @@ export default function CaseDetailPage() {
                     color: 'var(--color-risk-medium)',
                   }}
                 >
-                  {mockCase.matchConfidence}%
+                  {caseData.matchConfidence}%
                 </span>
               </div>
               <div
@@ -517,7 +635,7 @@ export default function CaseDetailPage() {
                 <div
                   style={{
                     height: '100%',
-                    width: `${mockCase.matchConfidence}%`,
+                    width: `${caseData.matchConfidence}%`,
                     background: 'var(--color-risk-medium)',
                     borderRadius: 3,
                   }}
@@ -663,7 +781,7 @@ export default function CaseDetailPage() {
           overflow: 'hidden',
         }}
       >
-        <AIReasoningTimeline events={mockTimeline} />
+        <AIReasoningTimeline events={timeline} />
       </div>
     </div>
   )
