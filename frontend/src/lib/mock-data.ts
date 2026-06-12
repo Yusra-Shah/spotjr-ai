@@ -82,6 +82,19 @@ export const mockGuards: Guard[] = [
   },
 ]
 
+export const mockResolvedCase: Case = {
+  id: 'CASE-A-000',
+  childAlias: 'Case A-000',
+  childAge: 5,
+  clothingDescription: 'Blue jacket, white sneakers',
+  lastSeenZone: 'Toy Zone',
+  reportedAt: '2026-06-12T09:15:00Z',
+  riskScore: 0,
+  riskLevel: 'low',
+  status: 'resolved',
+  matchConfidence: 95,
+}
+
 export const mockTimeline: TimelineEvent[] = [
   {
     id: 'EVT-001',
