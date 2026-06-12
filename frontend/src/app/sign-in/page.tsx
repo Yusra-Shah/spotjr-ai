@@ -16,7 +16,7 @@ export default function SignInPage() {
     const token = localStorage.getItem('spotjr_token')
     const role = localStorage.getItem('spotjr_role')
     if (token) {
-      router.replace(role === 'guard' ? '/guard/alert' : '/')
+      router.replace(role === 'guard' ? '/guard/alert' : '/cases')
     }
   }, [router])
 
@@ -25,7 +25,7 @@ export default function SignInPage() {
     setError(null)
     try {
       await login(role, 'spotjr2026')
-      router.push(role === 'guard' ? '/guard/alert' : '/')
+      router.push(role === 'guard' ? '/guard/alert' : '/cases')
     } catch (err) {
       console.error('[sign-in] login failed:', err)
       setError('Login failed. Backend may be offline — check that the server is running.')
