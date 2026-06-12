@@ -1,7 +1,38 @@
-import Link from 'next/link'
-import { Shield, Smartphone } from 'lucide-react'
+'use client'
+
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import { Shield, Smartphone, Loader2, AlertCircle } from 'lucide-react'
+import { login } from '@/lib/api'
 
 export default function SignInPage() {
+  const router = useRouter()
+  const [loading, setLoading] = useState<'operator' | 'guard' | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  // If already logged in, redirect immediately
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const token = localStorage.getItem('spotjr_token')
+    const role = localStorage.getItem('spotjr_role')
+    if (token) {
+      router.replace(role === 'guard' ? '/guard/alert' : '/')
+    }
+  }, [router])
+
+  async function handleLogin(role: 'operator' | 'guard') {
+    setLoading(role)
+    setError(null)
+    try {
+      await login(role, 'spotjr2026')
+      router.push(role === 'guard' ? '/guard/alert' : '/')
+    } catch (err) {
+      console.error('[sign-in] login failed:', err)
+      setError('Login failed. Backend may be offline — check that the server is running.')
+      setLoading(null)
+    }
+  }
+
   return (
     <div
       style={{
@@ -53,66 +84,92 @@ export default function SignInPage() {
             Demo Login
           </h2>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            <Link
-              href="/"
-              style={{ textDecoration: 'none' }}
+          {error && (
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: 8,
+                background: 'rgba(239,68,68,0.08)',
+                border: '1px solid rgba(239,68,68,0.3)',
+                borderRadius: 7,
+                padding: '10px 12px',
+                marginBottom: 16,
+              }}
             >
-              <button
-                style={{
-                  width: '100%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 12,
-                  background: 'var(--gradient-btn-primary)',
-                  color: '#fff',
-                  fontSize: 14,
-                  fontWeight: 600,
-                  padding: '14px 20px',
-                  borderRadius: 8,
-                  border: 'none',
-                  cursor: 'pointer',
-                }}
-              >
-                <Shield size={18} style={{ flexShrink: 0 }} />
-                <div style={{ textAlign: 'left' }}>
-                  <div>Login as Operator</div>
-                  <div style={{ fontSize: 11, fontWeight: 400, opacity: 0.8, marginTop: 1 }}>
-                    Access command center &amp; full controls
-                  </div>
-                </div>
-              </button>
-            </Link>
+              <AlertCircle size={14} style={{ color: 'var(--color-risk-critical)', flexShrink: 0, marginTop: 1 }} />
+              <p style={{ fontSize: 12, color: 'var(--color-risk-critical)', margin: 0, lineHeight: 1.5 }}>
+                {error}
+              </p>
+            </div>
+          )}
 
-            <Link
-              href="/guard/alert"
-              style={{ textDecoration: 'none' }}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <button
+              onClick={() => handleLogin('operator')}
+              disabled={loading !== null}
+              style={{
+                width: '100%',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 12,
+                background: loading !== null ? 'rgba(36,99,235,0.6)' : 'var(--gradient-btn-primary)',
+                color: '#fff',
+                fontSize: 14,
+                fontWeight: 600,
+                padding: '14px 20px',
+                borderRadius: 8,
+                border: 'none',
+                cursor: loading !== null ? 'not-allowed' : 'pointer',
+                opacity: loading === 'guard' ? 0.5 : 1,
+                transition: 'all 150ms',
+              }}
             >
-              <button
-                style={{
-                  width: '100%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 12,
-                  background: 'var(--color-bg-elevated)',
-                  color: 'var(--color-text-primary)',
-                  fontSize: 14,
-                  fontWeight: 600,
-                  padding: '14px 20px',
-                  borderRadius: 8,
-                  border: '1px solid var(--color-border-default)',
-                  cursor: 'pointer',
-                }}
-              >
-                <Smartphone size={18} style={{ flexShrink: 0, color: 'var(--color-brand-cyan)' }} />
-                <div style={{ textAlign: 'left' }}>
-                  <div>Login as Guard</div>
-                  <div style={{ fontSize: 11, fontWeight: 400, color: 'var(--color-text-secondary)', marginTop: 1 }}>
-                    Access mobile guard app
-                  </div>
+              {loading === 'operator' ? (
+                <Loader2 size={18} style={{ flexShrink: 0, animation: 'spin 1s linear infinite' }} />
+              ) : (
+                <Shield size={18} style={{ flexShrink: 0 }} />
+              )}
+              <div style={{ textAlign: 'left' }}>
+                <div>{loading === 'operator' ? 'Logging in…' : 'Login as Operator'}</div>
+                <div style={{ fontSize: 11, fontWeight: 400, opacity: 0.8, marginTop: 1 }}>
+                  Access command center &amp; full controls
                 </div>
-              </button>
-            </Link>
+              </div>
+            </button>
+
+            <button
+              onClick={() => handleLogin('guard')}
+              disabled={loading !== null}
+              style={{
+                width: '100%',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 12,
+                background: 'var(--color-bg-elevated)',
+                color: 'var(--color-text-primary)',
+                fontSize: 14,
+                fontWeight: 600,
+                padding: '14px 20px',
+                borderRadius: 8,
+                border: '1px solid var(--color-border-default)',
+                cursor: loading !== null ? 'not-allowed' : 'pointer',
+                opacity: loading === 'operator' ? 0.5 : 1,
+                transition: 'all 150ms',
+              }}
+            >
+              {loading === 'guard' ? (
+                <Loader2 size={18} style={{ flexShrink: 0, color: 'var(--color-brand-cyan)', animation: 'spin 1s linear infinite' }} />
+              ) : (
+                <Smartphone size={18} style={{ flexShrink: 0, color: 'var(--color-brand-cyan)' }} />
+              )}
+              <div style={{ textAlign: 'left' }}>
+                <div>{loading === 'guard' ? 'Logging in…' : 'Login as Guard'}</div>
+                <div style={{ fontSize: 11, fontWeight: 400, color: 'var(--color-text-secondary)', marginTop: 1 }}>
+                  Access mobile guard app
+                </div>
+              </div>
+            </button>
           </div>
 
           <p
@@ -131,6 +188,7 @@ export default function SignInPage() {
           </p>
         </div>
       </div>
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   )
 }

@@ -3,7 +3,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Upload, ArrowLeft, ArrowRight, Check, Scan, AlertTriangle } from 'lucide-react'
+import { Upload, ArrowLeft, ArrowRight, Check, Scan, AlertTriangle, RefreshCw } from 'lucide-react'
+import { createCase } from '@/lib/api'
 
 // ── Mini zone selector ───────────────────────────────────────────────────────
 const MINI_ZONES = [
@@ -207,8 +208,9 @@ export default function NewCasePage() {
   const [aiExtracting, setAiExtracting] = useState(false)
   const [aiAttributes, setAiAttributes] = useState<string[] | null>(null)
   const [activating, setActivating] = useState(false)
-  const [activatingStep, setActivatingStep] = useState<'creating' | 'scanning'>('creating')
+  const [activatingStep, setActivatingStep] = useState<'creating' | 'analyzing' | 'scanning' | 'building'>('creating')
   const [progress, setProgress] = useState(0)
+  const [activateError, setActivateError] = useState<string | null>(null)
 
   // Fake AI description extraction
   useEffect(() => {
@@ -228,23 +230,63 @@ export default function NewCasePage() {
     return () => clearTimeout(debounce)
   }, [form.description])
 
-  // Activation sequence
+  // Activation sequence — calls real API, cycles UI status messages in parallel
   useEffect(() => {
     if (!activating) return
-    const t1 = setTimeout(() => {
-      setActivatingStep('scanning')
-      let p = 0
-      const interval = setInterval(() => {
-        p += 2
-        setProgress(p)
-        if (p >= 100) {
-          clearInterval(interval)
-          router.push('/cases/demo-001')
-        }
-      }, 40)
-    }, 1000)
-    return () => clearTimeout(t1)
-  }, [activating, router])
+
+    const upperColorLabels = COLORS.filter((c) => form.upperColors.includes(c.id)).map((c) => c.label)
+    const lowerColorLabels = COLORS.filter((c) => form.lowerColors.includes(c.id)).map((c) => c.label)
+
+    const payload = {
+      child_description: form.description || `Child ~${form.age || '?'} years, ${upperColorLabels.join('/')} upper, ${lowerColorLabels.join('/')} lower`,
+      age_estimate: parseInt(form.age) || 0,
+      clothing_upper: [upperColorLabels.join(', '), form.upperType].filter(Boolean).join(' '),
+      clothing_lower: lowerColorLabels.join(', ') || 'not specified',
+      last_seen_zone: form.lastSeenZone || 'Unknown',
+      last_seen_time: new Date().toISOString().replace(/\.\d{3}Z$/, 'Z'),
+      parent_contact: [form.parentName, form.parentPhone].filter(Boolean).join(' — ') || 'Not provided',
+    }
+
+    // UI step sequence runs regardless of API speed
+    const steps: Array<typeof activatingStep> = ['creating', 'analyzing', 'scanning', 'building']
+    let stepIdx = 0
+    setActivatingStep(steps[0])
+    const stepInterval = setInterval(() => {
+      stepIdx = Math.min(stepIdx + 1, steps.length - 1)
+      setActivatingStep(steps[stepIdx])
+    }, 1200)
+
+    // Progress bar runs independently
+    let p = 0
+    const progressInterval = setInterval(() => {
+      p = Math.min(p + 1.2, 92) // cap at 92 until API resolves
+      setProgress(p)
+    }, 50)
+
+    // Real API call
+    createCase(payload)
+      .then((result) => {
+        clearInterval(stepInterval)
+        clearInterval(progressInterval)
+        setProgress(100)
+        setTimeout(() => router.push(`/cases/${result.case_id}`), 400)
+      })
+      .catch((err) => {
+        clearInterval(stepInterval)
+        clearInterval(progressInterval)
+        console.error('[new-case] createCase failed:', err)
+        setActivateError(err instanceof Error ? err.message : 'API call failed. Is the backend running?')
+        setActivating(false)
+        setProgress(0)
+        setActivatingStep('creating')
+      })
+
+    return () => {
+      clearInterval(stepInterval)
+      clearInterval(progressInterval)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activating])
 
   const handleFileChange = useCallback((file: File | null) => {
     if (!file) return
@@ -793,6 +835,18 @@ export default function NewCasePage() {
 
   // ── Processing overlay ──────────────────────────────────────────────────────
   if (activating) {
+    const stepLabels: Record<string, string> = {
+      creating: 'Creating case…',
+      analyzing: 'AI analyzing description…',
+      scanning: 'Scanning cameras…',
+      building: 'Building timeline…',
+    }
+    const stepSub: Record<string, string> = {
+      creating: 'Registering case in the system',
+      analyzing: 'Extracting visual attributes from description',
+      scanning: 'Searching all connected camera feeds',
+      building: 'Calculating risk score and predictions',
+    }
     return (
       <div
         style={{
@@ -819,42 +873,38 @@ export default function NewCasePage() {
         />
         <div style={{ textAlign: 'center' }}>
           <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--color-text-primary)', marginBottom: 8 }}>
-            {activatingStep === 'creating' ? 'Creating case…' : 'AI scanning cameras…'}
+            {stepLabels[activatingStep]}
           </div>
-          {activatingStep === 'scanning' && (
-            <div style={{ color: 'var(--color-text-secondary)', fontSize: 13, marginBottom: 20 }}>
-              Searching all 6 connected camera feeds
-            </div>
-          )}
+          <div style={{ color: 'var(--color-text-secondary)', fontSize: 13 }}>
+            {stepSub[activatingStep]}
+          </div>
         </div>
-        {activatingStep === 'scanning' && (
-          <div style={{ width: 320 }}>
+        <div style={{ width: 320 }}>
+          <div
+            style={{
+              height: 6,
+              background: 'var(--color-border-subtle)',
+              borderRadius: 3,
+              overflow: 'hidden',
+            }}
+          >
             <div
               style={{
-                height: 6,
-                background: 'var(--color-border-subtle)',
+                height: '100%',
+                width: `${progress}%`,
+                background: 'linear-gradient(90deg, var(--color-brand-cyan) 0%, var(--color-ai-primary) 100%)',
                 borderRadius: 3,
-                overflow: 'hidden',
+                transition: 'width 50ms linear',
               }}
-            >
-              <div
-                style={{
-                  height: '100%',
-                  width: `${progress}%`,
-                  background: 'linear-gradient(90deg, var(--color-brand-cyan) 0%, var(--color-ai-primary) 100%)',
-                  borderRadius: 3,
-                  transition: 'width 40ms linear',
-                }}
-              />
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6 }}>
-              <span style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>Scanning…</span>
-              <span style={{ fontSize: 11, fontFamily: 'monospace', color: 'var(--color-brand-cyan)', fontWeight: 700 }}>
-                {progress}%
-              </span>
-            </div>
+            />
           </div>
-        )}
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6 }}>
+            <span style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>Processing…</span>
+            <span style={{ fontSize: 11, fontFamily: 'monospace', color: 'var(--color-brand-cyan)', fontWeight: 700 }}>
+              {Math.round(progress)}%
+            </span>
+          </div>
+        </div>
         {progress >= 80 && (
           <div
             style={{
@@ -871,6 +921,54 @@ export default function NewCasePage() {
           </div>
         )}
         <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      </div>
+    )
+  }
+
+  // ── Error overlay ─────────────────────────────────────────────────────────
+  if (activateError) {
+    return (
+      <div
+        style={{
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(8,12,24,0.97)',
+          zIndex: 9999,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 20,
+          padding: 32,
+        }}
+      >
+        <AlertTriangle size={48} style={{ color: 'var(--color-risk-critical)' }} />
+        <div style={{ textAlign: 'center', maxWidth: 400 }}>
+          <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--color-text-primary)', marginBottom: 12 }}>
+            Failed to Create Case
+          </div>
+          <p style={{ fontSize: 13, color: 'var(--color-text-secondary)', lineHeight: 1.6, margin: 0 }}>
+            {activateError}
+          </p>
+        </div>
+        <button
+          onClick={() => setActivateError(null)}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            padding: '10px 24px',
+            borderRadius: 8,
+            background: 'var(--gradient-btn-primary)',
+            border: 'none',
+            color: '#fff',
+            fontSize: 14,
+            fontWeight: 700,
+            cursor: 'pointer',
+          }}
+        >
+          <RefreshCw size={14} /> Try Again
+        </button>
       </div>
     )
   }
