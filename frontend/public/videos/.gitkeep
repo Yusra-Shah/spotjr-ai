@@ -1,0 +1,4 @@
+# Drop your CCTV demo video files here.
+# Expected filenames: cam-01.mp4 through cam-06.mp4
+# These are served by Next.js at /videos/cam-XX.mp4
+# Files are excluded from git — add your own demo footage.

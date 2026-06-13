@@ -22,6 +22,7 @@ export interface Camera {
   zone: string
   status: CameraStatus
   confidence?: number
+  videoSrc?: string
 }
 
 export interface Guard {

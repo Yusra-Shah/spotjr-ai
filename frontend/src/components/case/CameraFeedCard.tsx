@@ -6,6 +6,7 @@ import type { Camera, CameraStatus } from '@/lib/types'
 
 interface Props {
   camera: Camera
+  videoSrc?: string
 }
 
 const STATUS_COLOR: Record<CameraStatus, string> = {
@@ -29,10 +30,12 @@ function getTimestamp(): string {
   return `${date} ${time}`
 }
 
-export default function CameraFeedCard({ camera }: Props) {
+export default function CameraFeedCard({ camera, videoSrc: videoSrcProp }: Props) {
   const isAlert = camera.status === 'match' || camera.status === 'high_risk'
   const isOffline = camera.status === 'offline'
   const color = STATUS_COLOR[camera.status]
+  // Explicit prop takes priority; fall back to camera object's videoSrc field
+  const videoSrc = videoSrcProp ?? camera.videoSrc
 
   const borderStyle: React.CSSProperties = isAlert
     ? {
@@ -108,6 +111,26 @@ export default function CameraFeedCard({ camera }: Props) {
               : 'linear-gradient(135deg, #060A14 0%, #080D1A 50%, #060A14 100%)',
           }}
         >
+          {/* ── Video base layer (z-index 0, behind all overlays) ──────────── */}
+          {videoSrc && !isOffline && (
+            <video
+              src={videoSrc}
+              autoPlay
+              loop
+              muted
+              playsInline
+              style={{
+                position: 'absolute',
+                inset: 0,
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover',
+                opacity: 0.7,
+                zIndex: 0,
+              }}
+            />
+          )}
+
           {/* CRT scan lines overlay */}
           <div
             style={{
@@ -201,8 +224,8 @@ export default function CameraFeedCard({ camera }: Props) {
             </div>
           )}
 
-          {/* Live feed placeholder text (when no detection) */}
-          {!isAlert && !isOffline && (
+          {/* Live feed placeholder text (only when no video and no detection) */}
+          {!isAlert && !isOffline && !videoSrc && (
             <div
               style={{
                 position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',

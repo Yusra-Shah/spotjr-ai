@@ -23,6 +23,7 @@ export const mockCameras: Camera[] = [
     name: 'Main Entrance',
     zone: 'Main Entrance',
     status: 'live',
+    videoSrc: '/videos/cam-01.mp4',
   },
   {
     id: 'CAM-02',
@@ -30,6 +31,7 @@ export const mockCameras: Camera[] = [
     zone: 'Food Court',
     status: 'match',
     confidence: 78,
+    videoSrc: '/videos/cam-02.mp4',
   },
   {
     id: 'CAM-03',
@@ -37,18 +39,21 @@ export const mockCameras: Camera[] = [
     zone: 'Food Court East',
     status: 'match',
     confidence: 94,
+    videoSrc: '/videos/cam-03.mp4',
   },
   {
     id: 'CAM-04',
     name: 'Escalator North',
     zone: 'Escalator North',
     status: 'live',
+    videoSrc: '/videos/cam-04.mp4',
   },
   {
     id: 'CAM-05',
     name: 'Exit A',
     zone: 'Exit A',
     status: 'live',
+    videoSrc: '/videos/cam-05.mp4',
   },
   {
     id: 'CAM-06',
@@ -56,6 +61,7 @@ export const mockCameras: Camera[] = [
     zone: 'Gate B Corridor',
     status: 'high_risk',
     confidence: 89,
+    videoSrc: '/videos/cam-06.mp4',
   },
 ]
 

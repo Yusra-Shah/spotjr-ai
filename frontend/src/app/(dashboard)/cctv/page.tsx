@@ -185,7 +185,7 @@ export default function CCTVPage() {
           }}
         >
           {filled.map((camera) => (
-            <CameraFeedCard key={camera.id} camera={camera} />
+            <CameraFeedCard key={camera.id} camera={camera} videoSrc={camera.videoSrc} />
           ))}
         </div>
       </div>
