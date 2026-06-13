@@ -190,13 +190,14 @@ export default function AIReasoningTimeline({ events }: Props) {
           const Icon = cfg.Icon
           const isSelected = selectedId === event.id
           const isLast = i === events.length - 1
+          const staggerDelay = `${i * 0.18}s`
 
           return (
             <div
               key={event.id}
               style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}
             >
-              {/* Node */}
+              {/* Node with bounce-in animation staggered */}
               <div
                 style={{
                   display: 'flex',
@@ -205,6 +206,8 @@ export default function AIReasoningTimeline({ events }: Props) {
                   gap: 4,
                   cursor: 'pointer',
                   padding: '0 6px',
+                  animation: `node-bounce-in 0.4s cubic-bezier(0.34,1.56,0.64,1) both`,
+                  animationDelay: staggerDelay,
                 }}
                 onClick={() => setSelectedId(isSelected ? null : event.id)}
               >
@@ -220,7 +223,12 @@ export default function AIReasoningTimeline({ events }: Props) {
                     alignItems: 'center',
                     justifyContent: 'center',
                     transition: 'all 150ms',
-                    boxShadow: isSelected ? `0 0 0 2px ${cfg.color}33` : 'none',
+                    boxShadow: isSelected
+                      ? `0 0 0 3px ${cfg.color}33`
+                      : isLast
+                        ? `0 0 0 0 ${cfg.color}55`
+                        : 'none',
+                    animation: isLast && !isSelected ? 'pulse-node 2s ease-in-out infinite' : undefined,
                   }}
                 >
                   <Icon size={14} style={{ color: cfg.color }} />
@@ -255,14 +263,17 @@ export default function AIReasoningTimeline({ events }: Props) {
                 </span>
               </div>
 
-              {/* Connector line */}
+              {/* Connector line — animates growing left to right */}
               {!isLast && (
                 <div
                   style={{
                     width: 32,
                     height: 1.5,
-                    background: 'var(--color-border-default)',
+                    background: `linear-gradient(90deg, ${cfg.color}55, var(--color-border-default))`,
                     flexShrink: 0,
+                    transformOrigin: 'left center',
+                    animation: 'grow-line 0.3s ease both',
+                    animationDelay: `${i * 0.18 + 0.18}s`,
                   }}
                 />
               )}
@@ -270,24 +281,31 @@ export default function AIReasoningTimeline({ events }: Props) {
           )
         })}
 
-        {/* "AI Processing" tail node */}
-        <div style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
-          <div style={{ width: 32, height: 1.5, background: 'var(--color-border-default)' }} />
+        {/* "AI Processing" tail node with spinner */}
+        <div style={{ display: 'flex', alignItems: 'center', flexShrink: 0, animation: `node-bounce-in 0.4s cubic-bezier(0.34,1.56,0.64,1) both`, animationDelay: `${events.length * 0.18}s` }}>
+          <div style={{ width: 32, height: 1.5, background: 'linear-gradient(90deg, rgba(139,92,246,0.3), rgba(139,92,246,0.1))', transformOrigin: 'left center', animation: 'grow-line 0.3s ease both', animationDelay: `${(events.length - 1) * 0.18 + 0.18}s` }} />
           <div style={{ padding: '0 6px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-            <div
-              style={{
-                width: 32,
-                height: 32,
-                borderRadius: '50%',
-                border: '1.5px dashed var(--color-ai-primary)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <span style={{ fontSize: 10, color: 'var(--color-ai-primary)', fontWeight: 700 }}>AI</span>
+            {/* Spinning ring indicator */}
+            <div style={{ position: 'relative', width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div
+                style={{
+                  position: 'absolute', inset: 0,
+                  borderRadius: '50%',
+                  border: '1.5px solid rgba(139,92,246,0.2)',
+                  borderTopColor: 'var(--color-ai-primary)',
+                  animation: 'spin 1.4s linear infinite',
+                }}
+              />
+              <div
+                style={{
+                  width: 8, height: 8, borderRadius: '50%',
+                  background: 'var(--color-ai-primary)',
+                  opacity: 0.7,
+                  animation: 'float-pulse 1.4s ease-in-out infinite',
+                }}
+              />
             </div>
-            <span style={{ fontSize: 9, color: 'var(--color-ai-primary)', whiteSpace: 'nowrap' }}>Processing…</span>
+            <span style={{ fontSize: 9, color: 'var(--color-ai-primary)', whiteSpace: 'nowrap', letterSpacing: '0.04em' }}>AI Processing…</span>
           </div>
         </div>
       </div>

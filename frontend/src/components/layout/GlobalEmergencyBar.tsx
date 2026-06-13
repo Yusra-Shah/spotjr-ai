@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { AlertTriangle, CheckCircle, Clock, MapPin } from 'lucide-react'
+import { AlertTriangle, CheckCircle, Clock, MapPin, Volume2 } from 'lucide-react'
 import type { Case } from '@/lib/types'
 
 interface Props {
@@ -39,17 +39,43 @@ export default function GlobalEmergencyBar({ activeCase }: Props) {
     borderBottom: '1px solid var(--color-border-subtle)',
     borderLeft: `3px solid ${isHigh ? 'var(--color-risk-critical)' : 'var(--color-risk-medium)'}`,
     background: isHigh ? 'var(--gradient-alert-high)' : 'var(--gradient-alert-medium)',
+    position: 'relative',
+    overflow: 'hidden',
   }
 
   return (
     <div
       style={barStyle}
-      className={`flex items-center px-5 gap-4 shrink-0 ${isHigh ? 'animate-blink-border' : ''}`}
+      className="flex items-center px-5 gap-4 shrink-0"
     >
+      {/* Red scan sweep across entire bar (HIGH only) */}
+      {isHigh && (
+        <div
+          style={{
+            position: 'absolute', top: 0, bottom: 0, width: '22%',
+            background: 'linear-gradient(90deg, transparent 0%, rgba(239,68,68,0.07) 50%, transparent 100%)',
+            animation: 'scan-bar 3s linear infinite',
+            pointerEvents: 'none', zIndex: 0,
+          }}
+        />
+      )}
+
       <AlertTriangle
         size={16}
-        style={{ color: isHigh ? 'var(--color-risk-critical)' : 'var(--color-risk-medium)', flexShrink: 0 }}
+        style={{ color: isHigh ? 'var(--color-risk-critical)' : 'var(--color-risk-medium)', flexShrink: 0, position: 'relative', zIndex: 1 }}
       />
+
+      {/* Alert sound indicator (HIGH only) */}
+      {isHigh && (
+        <Volume2
+          size={13}
+          style={{
+            color: 'var(--color-risk-critical)',
+            flexShrink: 0, position: 'relative', zIndex: 1,
+            animation: 'float-pulse 1.4s ease-in-out infinite',
+          }}
+        />
+      )}
 
       <span
         style={{
@@ -59,6 +85,8 @@ export default function GlobalEmergencyBar({ activeCase }: Props) {
           letterSpacing: '0.15em',
           textTransform: 'uppercase',
           flexShrink: 0,
+          position: 'relative', zIndex: 1,
+          animation: isHigh ? 'blink-border 1.8s ease-in-out infinite' : 'none',
         }}
       >
         {isHigh ? 'URGENT' : 'ACTIVE CASE'}

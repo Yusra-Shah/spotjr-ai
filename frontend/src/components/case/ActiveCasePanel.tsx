@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { User, ArrowRight, ExternalLink, CheckCircle, AlertOctagon, Navigation } from 'lucide-react'
+import { ArrowRight, ExternalLink, CheckCircle, AlertOctagon, Navigation, Volume2 } from 'lucide-react'
 import type { Case } from '@/lib/types'
 import RiskScoreIndicator from './RiskScoreIndicator'
 
@@ -11,26 +11,27 @@ interface Props {
 }
 
 function useElapsed(reportedAt: string) {
-  const [elapsed, setElapsed] = useState('')
+  const [secs, setSecs] = useState(0)
 
   useEffect(() => {
     function update() {
-      const diff = Math.floor((Date.now() - new Date(reportedAt).getTime()) / 1000)
-      const m = Math.floor(diff / 60)
-      const s = diff % 60
-      setElapsed(`${m}:${s.toString().padStart(2, '0')}`)
+      setSecs(Math.floor((Date.now() - new Date(reportedAt).getTime()) / 1000))
     }
     update()
     const id = setInterval(update, 1000)
     return () => clearInterval(id)
   }, [reportedAt])
 
-  return elapsed
+  const m = Math.floor(secs / 60)
+  const s = secs % 60
+  return { elapsed: `${m}:${s.toString().padStart(2, '0')}`, secs }
 }
 
 export default function ActiveCasePanel({ activeCase }: Props) {
-  const elapsed = useElapsed(activeCase.reportedAt)
+  const { elapsed, secs } = useElapsed(activeCase.reportedAt)
   const isHigh = activeCase.riskLevel === 'high' || activeCase.riskLevel === 'critical'
+  const isOverTenMin = secs >= 600
+  const isHighRisk = activeCase.riskScore >= 70
 
   return (
     <div
@@ -86,21 +87,34 @@ export default function ActiveCasePanel({ activeCase }: Props) {
           }}
         >
           <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-            {/* Avatar */}
+            {/* Child silhouette avatar with amber glow */}
             <div
               style={{
-                width: 48,
-                height: 48,
-                borderRadius: '50%',
-                background: 'var(--color-bg-inset)',
-                border: '2px solid var(--color-border-default)',
+                width: 56,
+                height: 56,
+                borderRadius: 10,
+                background: 'rgba(10,15,28,0.9)',
+                border: '1.5px solid rgba(245,158,11,0.45)',
+                boxShadow: '0 0 16px rgba(245,158,11,0.18), 0 0 4px rgba(245,158,11,0.08)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 flexShrink: 0,
+                overflow: 'hidden',
               }}
             >
-              <User size={20} style={{ color: 'var(--color-text-muted)' }} />
+              <svg viewBox="0 0 40 58" width="34" height="50" xmlns="http://www.w3.org/2000/svg">
+                {/* Head */}
+                <circle cx="20" cy="11" r="9" fill="rgba(240,244,255,0.12)" stroke="rgba(240,244,255,0.35)" strokeWidth="1.3" />
+                {/* Body */}
+                <path
+                  d="M 8 52 L 8 30 Q 8 21 20 21 Q 32 21 32 30 L 32 52 Z"
+                  fill="rgba(240,244,255,0.10)" stroke="rgba(240,244,255,0.28)" strokeWidth="1.3" strokeLinejoin="round"
+                />
+                {/* Arms */}
+                <line x1="8" y1="34" x2="2" y2="42" stroke="rgba(240,244,255,0.22)" strokeWidth="1.2" strokeLinecap="round" />
+                <line x1="32" y1="34" x2="38" y2="42" stroke="rgba(240,244,255,0.22)" strokeWidth="1.2" strokeLinecap="round" />
+              </svg>
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
@@ -136,9 +150,11 @@ export default function ActiveCasePanel({ activeCase }: Props) {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
-              background: 'var(--color-bg-inset)',
+              background: isOverTenMin ? 'rgba(239,68,68,0.06)' : 'var(--color-bg-inset)',
               borderRadius: 6,
               padding: '6px 12px',
+              border: isOverTenMin ? '1px solid rgba(239,68,68,0.25)' : '1px solid transparent',
+              transition: 'all 0.5s ease',
             }}
           >
             <span style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>Time missing</span>
@@ -147,7 +163,8 @@ export default function ActiveCasePanel({ activeCase }: Props) {
                 fontSize: 15,
                 fontFamily: 'monospace',
                 fontWeight: 700,
-                color: isHigh ? 'var(--color-risk-critical)' : 'var(--color-risk-medium)',
+                color: isOverTenMin ? 'var(--color-risk-critical)' : isHigh ? 'var(--color-risk-critical)' : 'var(--color-risk-medium)',
+                animation: isOverTenMin ? 'blink-border 2s ease-in-out infinite' : 'none',
               }}
             >
               {elapsed}
@@ -174,12 +191,14 @@ export default function ActiveCasePanel({ activeCase }: Props) {
           >
             Risk Score
           </div>
-          <RiskScoreIndicator
-            score={activeCase.riskScore}
-            level={activeCase.riskLevel}
-            reason="Near Exit B — alone, 14+ min, exit zone proximity"
-            trend="increasing"
-          />
+          <div style={isHighRisk ? { borderRadius: 8, animation: 'pulse-glow-red 2.5s ease-in-out infinite' } : {}}>
+            <RiskScoreIndicator
+              score={activeCase.riskScore}
+              level={activeCase.riskLevel}
+              reason="Near Exit B — alone, 14+ min, exit zone proximity"
+              trend="increasing"
+            />
+          </div>
         </section>
 
         {/* ── Section 3: Match Confidence ── */}
@@ -301,13 +320,15 @@ export default function ActiveCasePanel({ activeCase }: Props) {
           </div>
           <div
             style={{
-              background: 'rgba(139,92,246,0.08)',
-              borderLeft: '2px solid var(--color-ai-primary)',
+              background: 'rgba(139,92,246,0.07)',
+              borderLeft: '3px solid var(--color-ai-primary)',
               borderRadius: '0 6px 6px 0',
               padding: '10px 12px',
+              boxShadow: '0 0 12px rgba(139,92,246,0.12), inset 0 0 20px rgba(139,92,246,0.03)',
             }}
           >
             <p
+              className="animate-typing-cursor"
               style={{
                 fontSize: 12,
                 color: 'var(--color-text-secondary)',
@@ -324,6 +345,7 @@ export default function ActiveCasePanel({ activeCase }: Props) {
                 fontSize: 10,
                 fontFamily: 'monospace',
                 color: 'var(--color-ai-primary)',
+                opacity: 0.85,
               }}
             >
               AI Agent · {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
@@ -413,7 +435,11 @@ export default function ActiveCasePanel({ activeCase }: Props) {
                 fontWeight: 600,
               }}
             >
-              <Navigation size={10} /> Track on Map
+              <Navigation
+                size={10}
+                style={{ animation: 'float-pulse 2s ease-in-out infinite' }}
+              />
+              Track on Map
             </Link>
           </div>
         </section>
