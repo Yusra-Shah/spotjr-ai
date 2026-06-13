@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, Check, X, AlertTriangle, User, Navigation, ChevronRight } from 'lucide-react'
+import { ArrowLeft, Check, X, AlertTriangle, User, Navigation, ChevronRight, Clock, Map, Camera } from 'lucide-react'
 import MallDigitalTwin from '@/components/map/MallDigitalTwin'
 import RiskScoreIndicator from '@/components/case/RiskScoreIndicator'
 import AIReasoningTimeline from '@/components/ai/AIReasoningTimeline'
@@ -499,6 +499,49 @@ export default function CaseDetailPage({ params }: { params: { id: string } }) {
         >
           <AlertTriangle size={13} /> Escalate
         </button>
+      </div>
+
+      {/* ── Sub-page navigation tabs ───────────────────────────────────────── */}
+      <div style={{
+        height: 40, flexShrink: 0,
+        display: 'flex', alignItems: 'center', gap: 2,
+        padding: '0 16px',
+        borderBottom: '1px solid var(--color-border-subtle)',
+        background: 'var(--color-bg-inset)',
+      }}>
+        {[
+          { label: 'Intelligence Hub', href: `/cases/${caseId}`,          icon: User   },
+          { label: 'AI Timeline',      href: `/cases/${caseId}/timeline`,  icon: Clock  },
+          { label: 'Map View',         href: `/cases/${caseId}/map`,       icon: Map    },
+        ].map(tab => {
+          const TabIcon = tab.icon
+          const isActive = typeof window !== 'undefined'
+            ? window.location.pathname === tab.href
+            : tab.href === `/cases/${caseId}`
+          return (
+            <Link key={tab.href} href={tab.href} style={{
+              display: 'flex', alignItems: 'center', gap: 5,
+              padding: '5px 12px', borderRadius: 5, textDecoration: 'none',
+              background: isActive ? 'rgba(6,182,212,0.1)' : 'transparent',
+              border: isActive ? '1px solid rgba(6,182,212,0.25)' : '1px solid transparent',
+              color: isActive ? '#06B6D4' : 'var(--color-text-muted)',
+              fontSize: 12, fontWeight: isActive ? 600 : 400,
+              transition: 'all 120ms',
+            }}>
+              <TabIcon size={12} />
+              {tab.label}
+            </Link>
+          )
+        })}
+        <div style={{ flex: 1 }} />
+        <Link href={`/cctv/cam-06`} style={{
+          display: 'flex', alignItems: 'center', gap: 5,
+          padding: '4px 10px', borderRadius: 5, textDecoration: 'none',
+          background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.25)',
+          color: '#F59E0B', fontSize: 11, fontWeight: 600,
+        }}>
+          <Camera size={11} /> Live Camera
+        </Link>
       </div>
 
       {/* ── Main content ───────────────────────────────────────────────────── */}

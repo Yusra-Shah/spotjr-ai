@@ -92,6 +92,10 @@ class FoundryService:
             logger.error("generate_incident_report failed: %s", exc)
             return f"Incident report for case {case_data.get('case_id', 'unknown')}."
 
+    async def generate_incident_summary(self, case_data: dict) -> str:
+        """Alias used by the /report endpoint — delegates to generate_incident_report."""
+        return await self.generate_incident_report(case_data)
+
     async def get_risk_reasoning(self, risk_factors: list[str]) -> str:
         """Produce a plain-English explanation of why the risk score is elevated."""
         if not self._client:

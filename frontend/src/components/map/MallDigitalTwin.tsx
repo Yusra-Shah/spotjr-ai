@@ -53,19 +53,52 @@ const LAST_POS = CHILD_PATH[CHILD_PATH.length - 1]
 // Quadratic bezier: from last pos, curving toward Gate B exit
 const PREDICT_D = `M ${LAST_POS.x} ${LAST_POS.y} Q 718 268 755 300`
 
-type LayerKey = 'route' | 'cameras' | 'guards' | 'risk'
+// Camera coverage arcs — position + angle + radius in SVG coords
+const CAM_COVERAGE = [
+  { id: 'CAM-01', cx: 400, cy: 520, angle: 270, fov: 100, r: 60 },
+  { id: 'CAM-02', cx: 170, cy: 365, angle: 30,  fov: 110, r: 70 },
+  { id: 'CAM-03', cx: 390, cy: 365, angle: 180, fov: 100, r: 65 },
+  { id: 'CAM-04', cx: 140, cy: 130, angle: 90,  fov: 120, r: 75 },
+  { id: 'CAM-05', cx: 550, cy: 328, angle: 200, fov: 100, r: 65 },
+  { id: 'CAM-08', cx: 658, cy: 305, angle: 220, fov: 110, r: 70 },
+]
+
+// Heatmap cells (zone center, radius, intensity 0-1)
+const HEATMAP_CELLS = [
+  { cx: 170, cy: 365, r: 90, intensity: 0.55 },  // Food Court — medium crowd
+  { cx: 390, cy: 365, r: 80, intensity: 0.65 },  // Food Court East — high
+  { cx: 658, cy: 305, r: 60, intensity: 0.75 },  // Gate B — very high (risk)
+  { cx: 400, cy: 520, r: 70, intensity: 0.40 },  // Entrance — moderate
+  { cx: 140, cy: 170, r: 60, intensity: 0.35 },  // Toy Zone — low
+]
+
+function svgArcPath(cx: number, cy: number, r: number, angleDeg: number, fovDeg: number): string {
+  const toRad = (d: number) => (d * Math.PI) / 180
+  const startAngle = toRad(angleDeg - fovDeg / 2)
+  const endAngle   = toRad(angleDeg + fovDeg / 2)
+  const x1 = cx + r * Math.cos(startAngle)
+  const y1 = cy + r * Math.sin(startAngle)
+  const x2 = cx + r * Math.cos(endAngle)
+  const y2 = cy + r * Math.sin(endAngle)
+  const largeArc = fovDeg > 180 ? 1 : 0
+  return `M ${cx} ${cy} L ${x1} ${y1} A ${r} ${r} 0 ${largeArc} 1 ${x2} ${y2} Z`
+}
+
+type LayerKey = 'route' | 'cameras' | 'guards' | 'risk' | 'heatmap' | 'coverage'
 
 const LAYER_BTNS: { key: LayerKey; label: string }[] = [
-  { key: 'route',   label: 'Route'      },
-  { key: 'cameras', label: 'Cameras'    },
-  { key: 'guards',  label: 'Guards'     },
-  { key: 'risk',    label: 'Risk Zones' },
+  { key: 'route',    label: 'Route'      },
+  { key: 'cameras',  label: 'Cameras'    },
+  { key: 'guards',   label: 'Guards'     },
+  { key: 'risk',     label: 'Risk Zones' },
+  { key: 'heatmap',  label: 'Heatmap'    },
+  { key: 'coverage', label: 'Coverage'   },
 ]
 
 export default function MallDigitalTwin() {
   const [hoveredZone, setHoveredZone] = useState<string | null>(null)
   const [layers, setLayers] = useState<Record<LayerKey, boolean>>({
-    route: true, cameras: true, guards: true, risk: true,
+    route: true, cameras: true, guards: true, risk: true, heatmap: false, coverage: false,
   })
 
   function toggleLayer(key: LayerKey) {
@@ -180,10 +213,41 @@ export default function MallDigitalTwin() {
           </pattern>
         </defs>
 
+        {/* ── Heatmap radial gradients ─────────────────────────────────── */}
+        {HEATMAP_CELLS.map((cell, i) => (
+          <radialGradient key={`hg-${i}`} id={`hg-${i}`} cx="50%" cy="50%" r="50%">
+            <stop offset="0%"   stopColor={`rgba(239,68,68,${cell.intensity * 0.55})`} />
+            <stop offset="40%"  stopColor={`rgba(245,158,11,${cell.intensity * 0.35})`} />
+            <stop offset="80%"  stopColor={`rgba(6,182,212,${cell.intensity * 0.15})`} />
+            <stop offset="100%" stopColor="rgba(0,0,0,0)" />
+          </radialGradient>
+        ))}
+
         {/* ── Base ──────────────────────────────────────────────────────── */}
         <rect width="800" height="580" fill="#080C18" />
         <rect width="800" height="580" fill="url(#grid-fine)" />
         <rect width="800" height="580" fill="url(#grid-bg)" />
+
+        {/* ── Heatmap layer (below zones) ───────────────────────────────── */}
+        {layers.heatmap && HEATMAP_CELLS.map((cell, i) => (
+          <ellipse key={`h-${i}`}
+            cx={cell.cx} cy={cell.cy}
+            rx={cell.r * 1.2} ry={cell.r}
+            fill={`url(#hg-${i})`}
+            opacity={0.8}
+          />
+        ))}
+
+        {/* ── Camera coverage arcs (below zones, above heatmap) ─────────── */}
+        {layers.coverage && CAM_COVERAGE.map(cam => (
+          <path
+            key={`cov-${cam.id}`}
+            d={svgArcPath(cam.cx, cam.cy, cam.r, cam.angle, cam.fov)}
+            fill="rgba(6,182,212,0.07)"
+            stroke="rgba(6,182,212,0.18)"
+            strokeWidth="0.8"
+          />
+        ))}
 
         {/* Outer mall boundary */}
         <rect x="50" y="70" width="720" height="490" fill="none" stroke="#2E4470" strokeWidth="2" rx="4" />
