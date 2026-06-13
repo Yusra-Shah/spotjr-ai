@@ -281,3 +281,13 @@
   margin-left: 2px;
   font-size: 0.75em;
 }
+
+@keyframes critBorderPulse {
+  0%, 100% { border-left-color: #EF4444; }
+  50%       { border-left-color: rgba(239,68,68,0.3); }
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.25; }
+}
