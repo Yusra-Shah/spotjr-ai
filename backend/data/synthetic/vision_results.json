@@ -1,0 +1,350 @@
+{
+  "cam-01": {
+    "frame": "frames/cam-01.jpg",
+    "detections": [
+      {
+        "person_id": "cam-01_person-0",
+        "bbox": {
+          "x": 360,
+          "y": 503,
+          "width": 256,
+          "height": 574
+        },
+        "crop": "crops/cam-01_person-0.jpg",
+        "ai_description": "a person in a striped shirt; woman",
+        "vision_confidence": 0.9251
+      },
+      {
+        "person_id": "cam-01_person-1",
+        "bbox": {
+          "x": 1210,
+          "y": 402,
+          "width": 159,
+          "height": 258
+        },
+        "crop": "crops/cam-01_person-1.jpg",
+        "ai_description": "a person on a treadmill; woman",
+        "vision_confidence": 0.8717
+      }
+    ]
+  },
+  "cam-02": {
+    "frame": "frames/cam-02.jpg",
+    "detections": [
+      {
+        "person_id": "cam-02_person-0",
+        "bbox": {
+          "x": 1868,
+          "y": 1872,
+          "width": 209,
+          "height": 282
+        },
+        "crop": "crops/cam-02_person-0.jpg",
+        "ai_description": "a man in a yellow shirt carrying a skateboard; person, t-shirt",
+        "vision_confidence": 0.9031
+      },
+      {
+        "person_id": "cam-02_person-1",
+        "bbox": {
+          "x": 2154,
+          "y": 1636,
+          "width": 243,
+          "height": 464
+        },
+        "crop": "crops/cam-02_person-1.jpg",
+        "ai_description": "a man in a green shirt; person, t-shirt",
+        "vision_confidence": 0.8916
+      }
+    ]
+  },
+  "cam-03": {
+    "frame": "frames/cam-03.jpg",
+    "detections": [
+      {
+        "person_id": "cam-03_person-0",
+        "bbox": {
+          "x": 1574,
+          "y": 555,
+          "width": 129,
+          "height": 332
+        },
+        "crop": "crops/cam-03_person-0.jpg",
+        "ai_description": "a man wearing a white shirt and black overalls; person",
+        "vision_confidence": 0.8959
+      },
+      {
+        "person_id": "cam-03_person-1",
+        "bbox": {
+          "x": 1747,
+          "y": 575,
+          "width": 116,
+          "height": 307
+        },
+        "crop": "crops/cam-03_person-1.jpg",
+        "ai_description": "a close up of a dog; person, woman",
+        "vision_confidence": 0.8863
+      }
+    ]
+  },
+  "cam-04": {
+    "frame": "frames/cam-04.jpg",
+    "detections": [
+      {
+        "person_id": "cam-04_person-0",
+        "bbox": {
+          "x": 484,
+          "y": 258,
+          "width": 402,
+          "height": 819
+        },
+        "crop": "crops/cam-04_person-0.jpg",
+        "ai_description": "a man in a blue shirt; person, t-shirt",
+        "vision_confidence": 0.9378
+      },
+      {
+        "person_id": "cam-04_person-1",
+        "bbox": {
+          "x": 1789,
+          "y": 441,
+          "width": 128,
+          "height": 478
+        },
+        "crop": "crops/cam-04_person-1.jpg",
+        "ai_description": "a person wearing a red sweater; adult, t-shirt",
+        "vision_confidence": 0.9337
+      }
+    ]
+  },
+  "cam-05": {
+    "frame": "frames/cam-05.jpg",
+    "detections": [
+      {
+        "person_id": "cam-05_person-0",
+        "bbox": {
+          "x": 728,
+          "y": 627,
+          "width": 378,
+          "height": 450
+        },
+        "crop": "crops/cam-05_person-0.jpg",
+        "ai_description": "a woman in a yellow dress; person",
+        "vision_confidence": 0.9384
+      },
+      {
+        "person_id": "cam-05_person-1",
+        "bbox": {
+          "x": 1163,
+          "y": 622,
+          "width": 538,
+          "height": 454
+        },
+        "crop": "crops/cam-05_person-1.jpg",
+        "ai_description": "a woman sitting in a chair; person",
+        "vision_confidence": 0.9097
+      }
+    ]
+  },
+  "cam-06": {
+    "frame": "frames/cam-06.jpg",
+    "detections": [
+      {
+        "person_id": "cam-06_person-0",
+        "bbox": {
+          "x": 2008,
+          "y": 667,
+          "width": 119,
+          "height": 308
+        },
+        "crop": "crops/cam-06_person-0.jpg",
+        "ai_description": "a man in all black holding a cell phone; person, suit",
+        "vision_confidence": 0.9041
+      },
+      {
+        "person_id": "cam-06_person-1",
+        "bbox": {
+          "x": 0,
+          "y": 633,
+          "width": 210,
+          "height": 676
+        },
+        "crop": "crops/cam-06_person-1.jpg",
+        "ai_description": "a person in a black coat; woman",
+        "vision_confidence": 0.898
+      }
+    ]
+  },
+  "cam-07": {
+    "frame": "frames/cam-07.jpg",
+    "detections": [
+      {
+        "person_id": "cam-07_person-0",
+        "bbox": {
+          "x": 3096,
+          "y": 1366,
+          "width": 256,
+          "height": 550
+        },
+        "crop": "crops/cam-07_person-0.jpg",
+        "ai_description": "a person standing on a brick surface",
+        "vision_confidence": 0.8907
+      },
+      {
+        "person_id": "cam-07_person-1",
+        "bbox": {
+          "x": 2991,
+          "y": 780,
+          "width": 167,
+          "height": 342
+        },
+        "crop": "crops/cam-07_person-1.jpg",
+        "ai_description": "a woman wearing a black backpack; person, girl",
+        "vision_confidence": 0.8816
+      }
+    ]
+  },
+  "cam-08": {
+    "frame": "frames/cam-08.jpg",
+    "detections": [
+      {
+        "person_id": "cam-08_person-0",
+        "bbox": {
+          "x": 0,
+          "y": 78,
+          "width": 1038,
+          "height": 2076
+        },
+        "crop": "crops/cam-08_person-0.jpg",
+        "ai_description": "a person in a coat; man, jacket",
+        "vision_confidence": 0.9585
+      },
+      {
+        "person_id": "cam-08_person-1",
+        "bbox": {
+          "x": 2120,
+          "y": 832,
+          "width": 315,
+          "height": 932
+        },
+        "crop": "crops/cam-08_person-1.jpg",
+        "ai_description": "a man in a long coat; person, jacket",
+        "vision_confidence": 0.905
+      }
+    ]
+  },
+  "cam-09": {
+    "frame": "frames/cam-09.jpg",
+    "detections": [
+      {
+        "person_id": "cam-09_person-0",
+        "bbox": {
+          "x": 1510,
+          "y": 768,
+          "width": 770,
+          "height": 1386
+        },
+        "crop": "crops/cam-09_person-0.jpg",
+        "ai_description": "a man with a beard and a black shirt; person, t-shirt, hat, cap",
+        "vision_confidence": 0.9552
+      },
+      {
+        "person_id": "cam-09_person-1",
+        "bbox": {
+          "x": 2625,
+          "y": 786,
+          "width": 550,
+          "height": 1368
+        },
+        "crop": "crops/cam-09_person-1.jpg",
+        "ai_description": "a man standing next to a railing; person, shirt",
+        "vision_confidence": 0.9478
+      }
+    ]
+  },
+  "cam-10": {
+    "frame": "frames/cam-10.jpg",
+    "detections": [
+      {
+        "person_id": "cam-10_person-0",
+        "bbox": {
+          "x": 2008,
+          "y": 667,
+          "width": 119,
+          "height": 308
+        },
+        "crop": "crops/cam-10_person-0.jpg",
+        "ai_description": "a man in all black holding a cell phone; person, suit",
+        "vision_confidence": 0.9041
+      },
+      {
+        "person_id": "cam-10_person-1",
+        "bbox": {
+          "x": 0,
+          "y": 633,
+          "width": 210,
+          "height": 676
+        },
+        "crop": "crops/cam-10_person-1.jpg",
+        "ai_description": "a person in a black coat; woman",
+        "vision_confidence": 0.898
+      }
+    ]
+  },
+  "cam-11": {
+    "frame": "frames/cam-11.jpg",
+    "detections": [
+      {
+        "person_id": "cam-11_person-0",
+        "bbox": {
+          "x": 523,
+          "y": 946,
+          "width": 96,
+          "height": 303
+        },
+        "crop": "crops/cam-11_person-0.jpg",
+        "ai_description": "a person in a pink shirt; woman, skirt",
+        "vision_confidence": 0.8516
+      },
+      {
+        "person_id": "cam-11_person-1",
+        "bbox": {
+          "x": 146,
+          "y": 1359,
+          "width": 100,
+          "height": 194
+        },
+        "crop": "crops/cam-11_person-1.jpg",
+        "ai_description": "a man wearing a grey jacket and black pants; person, woman",
+        "vision_confidence": 0.8288
+      }
+    ]
+  },
+  "cam-12": {
+    "frame": "frames/cam-12.jpg",
+    "detections": [
+      {
+        "person_id": "cam-12_person-0",
+        "bbox": {
+          "x": 456,
+          "y": 1229,
+          "width": 295,
+          "height": 508
+        },
+        "crop": "crops/cam-12_person-0.jpg",
+        "ai_description": "a man on an escalator; person",
+        "vision_confidence": 0.9171
+      },
+      {
+        "person_id": "cam-12_person-1",
+        "bbox": {
+          "x": 375,
+          "y": 1380,
+          "width": 234,
+          "height": 520
+        },
+        "crop": "crops/cam-12_person-1.jpg",
+        "ai_description": "a person wearing a backpack",
+        "vision_confidence": 0.8941
+      }
+    ]
+  }
+}

@@ -14,6 +14,7 @@ from pathlib import Path
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from app.config import settings
 from app.routes.auth import router as auth_router
@@ -34,6 +35,11 @@ app.add_middleware(
 # ── Routers ───────────────────────────────────────────────────────────────────
 app.include_router(auth_router)
 app.include_router(cases_router)
+
+# ── Static files (crop images + frames for demo) ──────────────────────────────
+_SYNTHETIC_DIR = Path(__file__).resolve().parent / "data" / "synthetic"
+_SYNTHETIC_DIR.mkdir(parents=True, exist_ok=True)
+app.mount("/static", StaticFiles(directory=str(_SYNTHETIC_DIR)), name="static")
 
 
 # ── Health check ──────────────────────────────────────────────────────────────

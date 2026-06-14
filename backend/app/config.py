@@ -5,6 +5,7 @@ class Settings(BaseSettings):
     azure_ai_project_endpoint: str = ""
     azure_openai_endpoint: str = ""
     azure_openai_api_key: str = ""
+    azure_openai_deployment_name: str = "gpt-4o"
     azure_ai_vision_endpoint: str = ""
     azure_ai_vision_key: str = ""
     azure_blob_connection_string: str = ""

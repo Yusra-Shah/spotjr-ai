@@ -49,12 +49,25 @@ interface SearchResult {
   time: string
   confidence: number
   description: string
+  cropUrl?: string
 }
+
+interface RealMatch {
+  camera_id: string
+  person_id: string
+  bbox: { x: number; y: number; width: number; height: number }
+  ai_description: string
+  match_score: number
+  crop_url: string
+}
+
 const MOCK_RESULTS: SearchResult[] = [
   { cameraId: 'CAM-02', time: '12:01', confidence: 78, description: 'Detection: upper body match, clothing color match' },
   { cameraId: 'CAM-03', time: '12:03', confidence: 94, description: 'Detection: upper body match, clothing color match, height match' },
   { cameraId: 'CAM-06', time: '12:06', confidence: 89, description: 'Detection: upper body match, accessory detected' },
 ]
+
+const BACKEND = 'http://localhost:8000'
 
 function parseQuery(q: string): string {
   const lower = q.toLowerCase()
@@ -88,6 +101,7 @@ export default function SingleCameraPage({ params }: { params: { id: string } })
   const [showResults, setShowResults] = useState(false)
   const [overlayStep, setOverlayStep] = useState(0)
   const [parsedQuery, setParsedQuery] = useState('')
+  const [apiResults, setApiResults] = useState<{ matches: RealMatch[]; query_parsed: string } | null>(null)
 
   const cameraData = mockCameras.find(c => c.id === cameraId)
   const videoSrc = cameraData?.videoSrc
@@ -142,10 +156,11 @@ export default function SingleCameraPage({ params }: { params: { id: string } })
   }, [scanStep])
 
   // ── All-cameras search overlay ────────────────────────────────────────────
-  function startSearch() {
+  async function startSearch() {
     if (!searchQuery.trim()) return
     setParsedQuery(parseQuery(searchQuery))
     setShowResults(false)
+    setApiResults(null)
     setIsSearching(true)
     setOverlayStep(0)
     let step = 0
@@ -155,7 +170,25 @@ export default function SingleCameraPage({ params }: { params: { id: string } })
       if (step < SCAN_STEPS_OVERLAY.length - 1) {
         setTimeout(advance, SCAN_DELAYS_OVERLAY[step] ?? 400)
       } else {
-        setTimeout(() => { setIsSearching(false); setShowResults(true) }, SCAN_DELAYS_OVERLAY[SCAN_STEPS_OVERLAY.length - 1])
+        // Animation finished — call real backend, then reveal results
+        setTimeout(async () => {
+          try {
+            const resp = await fetch(`${BACKEND}/api/cases/CASE-A-001/search`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ description: searchQuery }),
+            })
+            if (resp.ok) {
+              const data = await resp.json()
+              setApiResults(data)
+              if (data.query_parsed) setParsedQuery(data.query_parsed)
+            }
+          } catch {
+            // Backend unavailable — MOCK_RESULTS are shown as fallback
+          }
+          setIsSearching(false)
+          setShowResults(true)
+        }, SCAN_DELAYS_OVERLAY[SCAN_STEPS_OVERLAY.length - 1])
       }
     }
     setTimeout(advance, SCAN_DELAYS_OVERLAY[0])
@@ -272,56 +305,70 @@ export default function SingleCameraPage({ params }: { params: { id: string } })
               )}
 
               {/* ── Animated scan boxes ─────────────────────────────────── */}
-              {showOverlays && SCAN_BOXES.map((box, idx) => {
-                if (!boxVisible(idx)) return null
-                const phase = boxPhase(idx)
-                const isCurrent = [1,3,5,7][idx] === scanStep || (idx === 3 && scanStep >= 7)
-                const borderColor = phase === 'match' ? '#F59E0B' : phase === 'nomatch' ? '#475569' : '#06B6D4'
-                const borderStyle = phase === 'analyzing' ? 'dashed' : 'solid'
-                const labelText = phase === 'nomatch'
-                  ? 'No match'
-                  : phase === 'match'
-                  ? `${scanConf > 0 ? scanConf : box.finalConf}% MATCH`
-                  : `Analyzing… ${scanConf}%`
+              <AnimatePresence>
+                {showOverlays && SCAN_BOXES.map((box, idx) => {
+                  if (!boxVisible(idx)) return null
+                  const phase = boxPhase(idx)
+                  const borderColor = phase === 'match' ? '#F59E0B' : phase === 'nomatch' ? '#64748B' : '#06B6D4'
+                  const labelText = phase === 'nomatch'
+                    ? 'No match'
+                    : phase === 'match'
+                    ? `${scanConf > 0 ? scanConf : box.finalConf}% MATCH`
+                    : `Analyzing… ${scanConf}%`
 
-                return (
-                  <motion.div
-                    key={idx}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: phase === 'nomatch' ? 0.35 : 1 }}
-                    exit={{ opacity: 0 }}
-                    style={{
-                      position: 'absolute',
-                      left: box.left, bottom: box.bottom,
-                      width: box.width, height: box.height,
-                      border: `${phase === 'match' ? 2 : 1.5}px ${borderStyle} ${borderColor}`,
-                      borderRadius: 3,
-                      zIndex: 5,
-                      boxShadow: phase === 'match' ? `0 0 16px ${borderColor}66` : 'none',
-                      animation: phase === 'match' ? 'pulseGlow 1.6s ease-in-out infinite' : 'none',
-                    }}
-                  >
-                    {/* Label above box */}
-                    <div style={{
-                      position: 'absolute', top: -18, left: 0,
-                      background: phase === 'match' ? '#F59E0B' : phase === 'nomatch' ? 'rgba(71,85,105,0.9)' : 'rgba(6,182,212,0.9)',
-                      color: phase === 'match' ? '#000' : '#fff',
-                      fontSize: 8, fontFamily: 'monospace', fontWeight: 800,
-                      padding: '2px 5px', borderRadius: 2, whiteSpace: 'nowrap',
-                      letterSpacing: '0.04em',
-                    }}>
-                      {labelText}
-                    </div>
-                    {/* Corner accents on match */}
-                    {phase === 'match' && <>
-                      <div style={{ position: 'absolute', top: -1, left: -1, width: 8, height: 8, borderTop: '2px solid #F59E0B', borderLeft: '2px solid #F59E0B' }} />
-                      <div style={{ position: 'absolute', top: -1, right: -1, width: 8, height: 8, borderTop: '2px solid #F59E0B', borderRight: '2px solid #F59E0B' }} />
-                      <div style={{ position: 'absolute', bottom: -1, left: -1, width: 8, height: 8, borderBottom: '2px solid #F59E0B', borderLeft: '2px solid #F59E0B' }} />
-                      <div style={{ position: 'absolute', bottom: -1, right: -1, width: 8, height: 8, borderBottom: '2px solid #F59E0B', borderRight: '2px solid #F59E0B' }} />
-                    </>}
-                  </motion.div>
-                )
-              })}
+                  return (
+                    <motion.div
+                      key={`scan-box-${idx}`}
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: phase === 'nomatch' ? 0.4 : 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.2 } }}
+                      transition={{ duration: 0.25 }}
+                      style={{
+                        position: 'absolute',
+                        left: box.left, bottom: box.bottom,
+                        width: box.width, height: box.height,
+                        border: `${phase === 'match' ? 2.5 : 2}px ${phase === 'analyzing' ? 'dashed' : 'solid'} ${borderColor}`,
+                        borderRadius: 3,
+                        zIndex: 5,
+                        background: phase === 'analyzing' ? 'rgba(6,182,212,0.05)' : 'transparent',
+                        boxShadow: phase === 'match'
+                          ? `0 0 20px ${borderColor}88, inset 0 0 20px ${borderColor}11`
+                          : phase === 'analyzing'
+                          ? `0 0 8px rgba(6,182,212,0.35)`
+                          : 'none',
+                        animation: phase === 'match' ? 'pulseGlow 1.6s ease-in-out infinite' : 'none',
+                      }}
+                    >
+                      {/* Label above box */}
+                      <div style={{
+                        position: 'absolute', top: -20, left: 0,
+                        background: phase === 'match' ? '#F59E0B' : phase === 'nomatch' ? 'rgba(71,85,105,0.95)' : 'rgba(6,182,212,0.95)',
+                        color: phase === 'match' ? '#000' : '#fff',
+                        fontSize: 9, fontFamily: 'monospace', fontWeight: 800,
+                        padding: '2px 6px', borderRadius: 2, whiteSpace: 'nowrap',
+                        letterSpacing: '0.05em',
+                        boxShadow: '0 1px 4px rgba(0,0,0,0.5)',
+                      }}>
+                        {labelText}
+                      </div>
+                      {/* Corner accents for analyzing */}
+                      {phase === 'analyzing' && <>
+                        <div style={{ position: 'absolute', top: -1, left: -1, width: 10, height: 10, borderTop: '2.5px solid #06B6D4', borderLeft: '2.5px solid #06B6D4' }} />
+                        <div style={{ position: 'absolute', top: -1, right: -1, width: 10, height: 10, borderTop: '2.5px solid #06B6D4', borderRight: '2.5px solid #06B6D4' }} />
+                        <div style={{ position: 'absolute', bottom: -1, left: -1, width: 10, height: 10, borderBottom: '2.5px solid #06B6D4', borderLeft: '2.5px solid #06B6D4' }} />
+                        <div style={{ position: 'absolute', bottom: -1, right: -1, width: 10, height: 10, borderBottom: '2.5px solid #06B6D4', borderRight: '2.5px solid #06B6D4' }} />
+                      </>}
+                      {/* Corner accents for match */}
+                      {phase === 'match' && <>
+                        <div style={{ position: 'absolute', top: -1, left: -1, width: 12, height: 12, borderTop: '3px solid #F59E0B', borderLeft: '3px solid #F59E0B' }} />
+                        <div style={{ position: 'absolute', top: -1, right: -1, width: 12, height: 12, borderTop: '3px solid #F59E0B', borderRight: '3px solid #F59E0B' }} />
+                        <div style={{ position: 'absolute', bottom: -1, left: -1, width: 12, height: 12, borderBottom: '3px solid #F59E0B', borderLeft: '3px solid #F59E0B' }} />
+                        <div style={{ position: 'absolute', bottom: -1, right: -1, width: 12, height: 12, borderBottom: '3px solid #F59E0B', borderRight: '3px solid #F59E0B' }} />
+                      </>}
+                    </motion.div>
+                  )
+                })}
+              </AnimatePresence>
 
               {/* Cyan sweep line (scanning) */}
               {showOverlays && scanStep > 0 && scanStep < 9 && (
@@ -426,62 +473,96 @@ export default function SingleCameraPage({ params }: { params: { id: string } })
 
           {/* Results */}
           <AnimatePresence>
-            {showResults && (
-              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} style={{ padding: '0 12px 12px', flexShrink: 0 }}>
-                <div style={{ padding: '8px 12px', borderRadius: 6, background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.25)', marginBottom: 10 }}>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: '#10B981', marginBottom: 3 }}>3 possible matches found across 6 cameras</div>
-                  <div style={{ fontSize: 10, color: 'var(--color-text-muted)' }}>Query matched: {parsedQuery}</div>
-                </div>
-                {/* Re-ID chain */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '6px 10px', borderRadius: 5, marginBottom: 10, background: 'rgba(6,182,212,0.06)', border: '1px solid rgba(6,182,212,0.2)' }}>
-                  <span style={{ fontSize: 9, fontFamily: 'monospace', color: 'var(--color-text-muted)', marginRight: 4 }}>Re-ID Chain:</span>
-                  {['CAM-02','CAM-03','CAM-06'].map((cam, i, arr) => (
-                    <span key={cam} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                      <span style={{ fontSize: 10, fontFamily: 'monospace', fontWeight: 700, color: '#06B6D4', background: 'rgba(6,182,212,0.12)', border: '1px solid rgba(6,182,212,0.25)', padding: '1px 5px', borderRadius: 3 }}>{cam}</span>
-                      {i < arr.length - 1 && <ChevronRight size={10} style={{ color: 'var(--color-text-muted)' }} />}
-                    </span>
-                  ))}
-                </div>
-                {/* Result cards */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  {MOCK_RESULTS.map(result => {
-                    const bc = confColor(result.confidence)
-                    return (
-                      <div key={result.cameraId} style={{ borderRadius: 7, border: '1px solid var(--color-border-subtle)', borderLeft: `3px solid ${bc}`, background: 'var(--color-bg-elevated)', overflow: 'hidden' }}>
-                        <div style={{ height: 52, background: '#060A14', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          <div style={{ position: 'absolute', left: '30%', bottom: '8%', width: '16%', height: '75%', border: `1.5px solid ${bc}`, borderRadius: 2, boxShadow: `0 0 6px ${bc}66` }} />
-                          <span style={{ fontSize: 8, color: 'var(--color-text-muted)', fontFamily: 'monospace' }}>FRAME · {result.time}</span>
-                          <div style={{ position: 'absolute', top: 4, right: 4, background: bc, color: '#000', fontSize: 8, fontFamily: 'monospace', fontWeight: 800, padding: '1px 5px', borderRadius: 2 }}>{result.confidence}%</div>
-                          <div style={{ position: 'absolute', bottom: 4, left: 4, fontSize: 8, fontFamily: 'monospace', color: '#06B6D4', background: 'rgba(0,0,0,0.7)', padding: '1px 4px', borderRadius: 2 }}>{result.cameraId}</div>
-                        </div>
-                        <div style={{ padding: '8px 10px' }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                            <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-text-primary)', fontFamily: 'monospace' }}>{result.cameraId}</span>
-                            <span style={{ fontSize: 10, fontFamily: 'monospace', color: 'var(--color-text-muted)' }}>{result.time}</span>
-                          </div>
-                          <div style={{ marginBottom: 5 }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2 }}>
-                              <span style={{ fontSize: 9, color: 'var(--color-text-muted)' }}>Confidence</span>
-                              <span style={{ fontSize: 9, fontFamily: 'monospace', fontWeight: 700, color: bc }}>{result.confidence}%</span>
+            {showResults && (() => {
+              // Normalize real API results or fall back to mock
+              const displayResults: SearchResult[] = apiResults
+                ? apiResults.matches.map(m => ({
+                    cameraId: m.camera_id,
+                    time: 'LIVE',
+                    confidence: m.match_score,
+                    description: m.ai_description,
+                    cropUrl: m.crop_url,
+                  }))
+                : MOCK_RESULTS
+              const reidCams = displayResults.map(r => r.cameraId)
+              const isReal = !!apiResults
+
+              return (
+                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} style={{ padding: '0 12px 12px', flexShrink: 0 }}>
+                  <div style={{ padding: '8px 12px', borderRadius: 6, background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.25)', marginBottom: 10 }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: '#10B981', marginBottom: 3 }}>
+                      {displayResults.length} possible match{displayResults.length !== 1 ? 'es' : ''} found{isReal ? ' · Azure AI' : ' across 6 cameras'}
+                    </div>
+                    <div style={{ fontSize: 10, color: 'var(--color-text-muted)' }}>Query matched: {parsedQuery}</div>
+                  </div>
+                  {/* Re-ID chain */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '6px 10px', borderRadius: 5, marginBottom: 10, background: 'rgba(6,182,212,0.06)', border: '1px solid rgba(6,182,212,0.2)', flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: 9, fontFamily: 'monospace', color: 'var(--color-text-muted)', marginRight: 4 }}>Re-ID Chain:</span>
+                    {reidCams.map((cam, i, arr) => (
+                      <span key={cam + i} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <span style={{ fontSize: 10, fontFamily: 'monospace', fontWeight: 700, color: '#06B6D4', background: 'rgba(6,182,212,0.12)', border: '1px solid rgba(6,182,212,0.25)', padding: '1px 5px', borderRadius: 3 }}>{cam}</span>
+                        {i < arr.length - 1 && <ChevronRight size={10} style={{ color: 'var(--color-text-muted)' }} />}
+                      </span>
+                    ))}
+                  </div>
+                  {/* Result cards */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {displayResults.map((result, ri) => {
+                      const bc = confColor(result.confidence)
+                      return (
+                        <div key={result.cameraId + ri} style={{ borderRadius: 7, border: '1px solid var(--color-border-subtle)', borderLeft: `3px solid ${bc}`, background: 'var(--color-bg-elevated)', overflow: 'hidden' }}>
+                          {/* Crop image (real) or placeholder (mock) */}
+                          {result.cropUrl ? (
+                            <div style={{ position: 'relative', background: '#060A14' }}>
+                              <img
+                                src={`${BACKEND}${result.cropUrl}`}
+                                alt={`${result.cameraId} crop`}
+                                style={{ width: '100%', height: 80, objectFit: 'cover', display: 'block', opacity: 0.92 }}
+                                onError={e => { (e.target as HTMLImageElement).style.display = 'none' }}
+                              />
+                              <div style={{ position: 'absolute', top: 4, right: 4, background: bc, color: '#000', fontSize: 8, fontFamily: 'monospace', fontWeight: 800, padding: '1px 5px', borderRadius: 2 }}>{result.confidence}%</div>
+                              <div style={{ position: 'absolute', bottom: 4, left: 4, fontSize: 8, fontFamily: 'monospace', color: '#06B6D4', background: 'rgba(0,0,0,0.7)', padding: '1px 4px', borderRadius: 2 }}>{result.cameraId}</div>
                             </div>
-                            <div style={{ height: 3, borderRadius: 2, background: 'var(--color-border-subtle)', overflow: 'hidden' }}>
-                              <div style={{ height: '100%', width: `${result.confidence}%`, background: bc, borderRadius: 2 }} />
+                          ) : (
+                            <div style={{ height: 52, background: '#060A14', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              <div style={{ position: 'absolute', left: '30%', bottom: '8%', width: '16%', height: '75%', border: `1.5px solid ${bc}`, borderRadius: 2, boxShadow: `0 0 6px ${bc}66` }} />
+                              <span style={{ fontSize: 8, color: 'var(--color-text-muted)', fontFamily: 'monospace' }}>FRAME · {result.time}</span>
+                              <div style={{ position: 'absolute', top: 4, right: 4, background: bc, color: '#000', fontSize: 8, fontFamily: 'monospace', fontWeight: 800, padding: '1px 5px', borderRadius: 2 }}>{result.confidence}%</div>
+                              <div style={{ position: 'absolute', bottom: 4, left: 4, fontSize: 8, fontFamily: 'monospace', color: '#06B6D4', background: 'rgba(0,0,0,0.7)', padding: '1px 4px', borderRadius: 2 }}>{result.cameraId}</div>
                             </div>
+                          )}
+                          <div style={{ padding: '8px 10px' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                              <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-text-primary)', fontFamily: 'monospace' }}>{result.cameraId}</span>
+                              <span style={{ fontSize: 10, fontFamily: 'monospace', color: 'var(--color-text-muted)' }}>{result.time}</span>
+                            </div>
+                            <div style={{ marginBottom: 5 }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2 }}>
+                                <span style={{ fontSize: 9, color: 'var(--color-text-muted)' }}>Confidence</span>
+                                <span style={{ fontSize: 9, fontFamily: 'monospace', fontWeight: 700, color: bc }}>{result.confidence}%</span>
+                              </div>
+                              <div style={{ height: 3, borderRadius: 2, background: 'var(--color-border-subtle)', overflow: 'hidden' }}>
+                                <div style={{ height: '100%', width: `${result.confidence}%`, background: bc, borderRadius: 2 }} />
+                              </div>
+                            </div>
+                            <div style={{ fontSize: 10, color: 'var(--color-text-muted)', marginBottom: 7, lineHeight: 1.4 }}>{result.description}</div>
+                            <button
+                              onClick={() => { window.location.href = '/cctv/' + result.cameraId.toLowerCase() }}
+                              style={{ width: '100%', padding: '5px 0', borderRadius: 5, background: 'rgba(6,182,212,0.1)', border: '1px solid rgba(6,182,212,0.3)', color: '#06B6D4', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}
+                            >
+                              View Camera
+                            </button>
                           </div>
-                          <div style={{ fontSize: 10, color: 'var(--color-text-muted)', marginBottom: 7, lineHeight: 1.4 }}>{result.description}</div>
-                          <button onClick={() => { window.location.href = '/cctv/' + result.cameraId }} style={{ width: '100%', padding: '5px 0', borderRadius: 5, background: 'rgba(6,182,212,0.1)', border: '1px solid rgba(6,182,212,0.3)', color: '#06B6D4', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
-                            View Camera
-                          </button>
                         </div>
-                      </div>
-                    )
-                  })}
-                </div>
-                <div style={{ marginTop: 10, fontSize: 9, fontFamily: 'monospace', color: '#8B5CF6', textAlign: 'center', letterSpacing: '0.04em' }}>
-                  Powered by Azure AI Foundry + Foundry IQ
-                </div>
-              </motion.div>
-            )}
+                      )
+                    })}
+                  </div>
+                  <div style={{ marginTop: 10, fontSize: 9, fontFamily: 'monospace', color: '#8B5CF6', textAlign: 'center', letterSpacing: '0.04em' }}>
+                    {isReal ? 'Azure AI Vision + GPT-4o · Real inference' : 'Powered by Azure AI Foundry + Foundry IQ'}
+                  </div>
+                </motion.div>
+              )
+            })()}
           </AnimatePresence>
 
           {/* Camera metadata */}

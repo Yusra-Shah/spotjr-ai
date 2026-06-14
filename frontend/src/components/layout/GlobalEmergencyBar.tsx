@@ -1,5 +1,6 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { AlertTriangle, CheckCircle, Clock, MapPin, Volume2 } from 'lucide-react'
 import type { Case } from '@/lib/types'
@@ -8,7 +9,7 @@ interface Props {
   activeCase?: Case
 }
 
-function formatElapsed(reportedAt: string): string {
+function calcElapsed(reportedAt: string): string {
   const diff = Math.floor((Date.now() - new Date(reportedAt).getTime()) / 1000)
   const m = Math.floor(diff / 60)
   const s = diff % 60
@@ -16,6 +17,15 @@ function formatElapsed(reportedAt: string): string {
 }
 
 export default function GlobalEmergencyBar({ activeCase }: Props) {
+  // Client-only elapsed timer — avoids server/client hydration mismatch
+  const [elapsed, setElapsed] = useState('')
+  useEffect(() => {
+    if (!activeCase) return
+    const update = () => setElapsed(calcElapsed(activeCase.reportedAt))
+    update()
+    const id = setInterval(update, 1000)
+    return () => clearInterval(id)
+  }, [activeCase])
   if (!activeCase) {
     return (
       <div
@@ -112,7 +122,7 @@ export default function GlobalEmergencyBar({ activeCase }: Props) {
       <div className="flex items-center gap-1.5">
         <Clock size={12} style={{ color: 'var(--color-text-muted)' }} />
         <span style={{ color: 'var(--color-text-secondary)', fontSize: 12, fontFamily: 'monospace' }}>
-          Missing: {formatElapsed(activeCase.reportedAt)}
+          Missing: {elapsed || '…'}
         </span>
       </div>
 

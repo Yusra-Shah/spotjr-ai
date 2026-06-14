@@ -5,15 +5,22 @@ All state stored in an in-memory dict (demo only — no real database).
 
 from __future__ import annotations
 
+import json
 import uuid
 from datetime import datetime
+from pathlib import Path
 from typing import Any
 
 from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel
 
 from app.agents.coordinator_agent import CoordinatorAgent
 from app.models.schemas import CaseCreate, CaseResponse, DispatchRequest
 from app.services.foundry_service import FoundryService
+
+_VISION_RESULTS = (
+    Path(__file__).resolve().parent.parent.parent / "data" / "synthetic" / "vision_results.json"
+)
 
 router = APIRouter(prefix="/api/cases", tags=["cases"])
 
@@ -147,6 +154,53 @@ async def generate_report(case_id: str) -> dict:
                 "microsoft_responsible_ai": True,
             },
         },
+    }
+
+
+class _SearchRequest(BaseModel):
+    description: str
+
+
+@router.post("/{case_id}/search")
+async def search_cameras(case_id: str, body: _SearchRequest) -> dict:
+    """
+    Search all cached camera detections for a description match.
+    Loads vision_results.json (produced by scripts/analyze_cameras.py),
+    scores each detection with GPT-4o, and returns the top 3 matches.
+    """
+    try:
+        vision_data: dict = json.loads(_VISION_RESULTS.read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        raise HTTPException(
+            status_code=503,
+            detail="Vision results not found. Run scripts/analyze_cameras.py first.",
+        )
+
+    description = body.description.strip()
+
+    # Parse query attributes (one GPT call)
+    query_parsed = await _foundry.parse_query_attributes(description)
+
+    # Score every detection across all cameras
+    matches = []
+    for cam_id, cam_data in vision_data.items():
+        for detection in cam_data.get("detections", []):
+            ai_desc = detection.get("ai_description", "")
+            score = await _foundry.score_match(description, ai_desc)
+            matches.append({
+                "camera_id": cam_id.upper(),
+                "person_id": detection["person_id"],
+                "bbox": detection["bbox"],
+                "ai_description": ai_desc,
+                "match_score": score,
+                "crop_url": f"/static/{detection['crop']}",
+            })
+
+    matches.sort(key=lambda m: m["match_score"], reverse=True)
+
+    return {
+        "matches": matches[:3],
+        "query_parsed": query_parsed,
     }
 
 
