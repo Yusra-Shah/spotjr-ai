@@ -1,7 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { Zap, ArrowRight, LogIn, Shield } from 'lucide-react'
+import { Zap, ArrowRight } from 'lucide-react'
 import { motion } from 'framer-motion'
 
 // Reliable navigation — no router dependency
@@ -19,17 +18,6 @@ const FADE_UP = (delay = 0) => ({
 })
 
 export default function LandingPage() {
-  const [mounted, setMounted] = useState(false)
-
-  useEffect(() => {
-    setMounted(true)
-    const token = localStorage.getItem('spotjr_token')
-    const role = localStorage.getItem('spotjr_role')
-    if (token) {
-      window.location.href = role === 'guard' ? '/guard/alert' : '/cases'
-    }
-  }, [])
-
   return (
     <div style={{
       minHeight: '100vh',
@@ -44,7 +32,7 @@ export default function LandingPage() {
       fontFamily: "'Inter Variable', 'Inter', system-ui, sans-serif",
     }}>
 
-      {/* ── Top accent bar (Linear trademark) ─────────────────────────────── */}
+      {/* ── Top accent bar ─────────────────────────────────────────────────── */}
       <div style={{
         position: 'fixed',
         top: 0, left: 0, right: 0,
@@ -67,7 +55,7 @@ export default function LandingPage() {
           backgroundSize: '28px 28px',
         }} />
 
-        {/* Horizontal rule lines (Linear grid) */}
+        {/* Horizontal rule lines */}
         {[...Array(6)].map((_, i) => (
           <div key={i} style={{
             position: 'absolute',
@@ -79,116 +67,8 @@ export default function LandingPage() {
         ))}
       </div>
 
-      {/* ── Floating micro-cards (decorative) ────────────────────────────── */}
-      {mounted && (
-        <>
-          <motion.div
-            initial={{ opacity: 0, x: -40, y: 20 }}
-            animate={{ opacity: 1, x: 0, y: 0 }}
-            transition={{ delay: 0.8, duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-            style={{
-              position: 'absolute',
-              left: '6%',
-              top: '22%',
-              padding: '10px 14px',
-              borderRadius: 12,
-              background: 'rgba(255,255,255,0.85)',
-              backdropFilter: 'blur(12px)',
-              border: '1px solid rgba(162,0,34,0.12)',
-              boxShadow: '0 4px 20px rgba(162,0,34,0.08)',
-              fontSize: 11,
-              color: '#A20022',
-              fontWeight: 600,
-              letterSpacing: '0.04em',
-              animation: 'floatCard1 6s ease-in-out infinite',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#A20022', display: 'inline-block', flexShrink: 0, animation: 'blink 1.5s ease-in-out infinite' }} />
-              ALERT: Child detected · CAM-02
-            </div>
-            <div style={{ color: '#9A8A84', fontWeight: 400, marginTop: 3 }}>Confidence 94% · Food Court</div>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, x: 40, y: -20 }}
-            animate={{ opacity: 1, x: 0, y: 0 }}
-            transition={{ delay: 1.0, duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-            style={{
-              position: 'absolute',
-              right: '6%',
-              top: '28%',
-              padding: '10px 14px',
-              borderRadius: 12,
-              background: 'rgba(255,255,255,0.85)',
-              backdropFilter: 'blur(12px)',
-              border: '1px solid rgba(101,164,209,0.2)',
-              boxShadow: '0 4px 20px rgba(101,164,209,0.1)',
-              fontSize: 11,
-              color: '#2E7CB8',
-              fontWeight: 600,
-              letterSpacing: '0.04em',
-              animation: 'floatCard2 8s ease-in-out infinite',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            <div>Azure AI Foundry</div>
-            <div style={{ color: '#9A8A84', fontWeight: 400, marginTop: 3 }}>Coordinator Agent · Online</div>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 40 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 1.2, duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-            style={{
-              position: 'absolute',
-              right: '8%',
-              bottom: '22%',
-              padding: '10px 14px',
-              borderRadius: 12,
-              background: 'rgba(255,255,255,0.85)',
-              backdropFilter: 'blur(12px)',
-              border: '1px solid rgba(90,123,18,0.2)',
-              boxShadow: '0 4px 20px rgba(90,123,18,0.08)',
-              fontSize: 11,
-              color: '#4A6A0A',
-              fontWeight: 600,
-              letterSpacing: '0.04em',
-              animation: 'floatCard3 7s ease-in-out infinite',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#5A7B12', display: 'inline-block', flexShrink: 0 }} />
-              Child found · Gate B
-            </div>
-            <div style={{ color: '#9A8A84', fontWeight: 400, marginTop: 3 }}>Response: 5m 12s</div>
-          </motion.div>
-        </>
-      )}
-
       {/* ── Main content ─────────────────────────────────────────────────── */}
       <div style={{ position: 'relative', zIndex: 1, width: '100%', maxWidth: 440 }}>
-
-        {/* Hackathon badge */}
-        <motion.div {...FADE_UP(0)} style={{ textAlign: 'center', marginBottom: 24 }}>
-          <span style={{
-            display: 'inline-flex', alignItems: 'center', gap: 7,
-            padding: '6px 16px',
-            borderRadius: 999,
-            background: 'rgba(162,0,34,0.06)',
-            border: '1px solid rgba(162,0,34,0.18)',
-            fontSize: 11, fontWeight: 700, color: '#A20022',
-            letterSpacing: '0.06em', textTransform: 'uppercase',
-          }}>
-            <span style={{
-              width: 6, height: 6, borderRadius: '50%', background: '#A20022',
-              display: 'inline-block', animation: 'blink 1.4s ease-in-out infinite',
-            }} />
-            Child Safety AI &nbsp;·&nbsp; Portfolio Demo
-          </span>
-        </motion.div>
 
         {/* Logo */}
         <motion.div {...FADE_UP(0.08)} style={{ textAlign: 'center', marginBottom: 40 }}>
@@ -226,10 +106,8 @@ export default function LandingPage() {
           </p>
         </motion.div>
 
-        {/* Buttons */}
-        <motion.div {...FADE_UP(0.2)} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-
-          {/* Primary — crimson */}
+        {/* Button */}
+        <motion.div {...FADE_UP(0.2)}>
           <button
             onClick={goToDemo}
             style={{
@@ -260,94 +138,16 @@ export default function LandingPage() {
           >
             <Zap size={20} style={{ flexShrink: 0, filter: 'drop-shadow(0 0 6px rgba(255,255,255,0.4))' }} />
             <div style={{ flex: 1 }}>
-              <div>Skip Login — View Demo</div>
+              <div>Enter Command Center</div>
               <div style={{ fontSize: 11, fontWeight: 400, opacity: 0.75, marginTop: 2 }}>
-                Instant access · no login required for judges
+                Explore the live demo
               </div>
             </div>
             <ArrowRight size={16} style={{ opacity: 0.8, flexShrink: 0 }} />
           </button>
-
-          {/* Secondary — sky blue */}
-          <button
-            onClick={goToDemo}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 14,
-              width: '100%',
-              background: 'rgba(101,164,209,0.07)',
-              border: '1.5px solid rgba(101,164,209,0.35)',
-              color: '#1E6898',
-              fontSize: 15, fontWeight: 600,
-              padding: '16px 22px',
-              borderRadius: 12,
-              cursor: 'pointer',
-              textAlign: 'left',
-              transition: 'all 200ms cubic-bezier(0.34,1.56,0.64,1)',
-              letterSpacing: '-0.01em',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = 'rgba(101,164,209,0.13)'
-              e.currentTarget.style.borderColor = 'rgba(101,164,209,0.6)'
-              e.currentTarget.style.transform = 'translateY(-1px)'
-              e.currentTarget.style.boxShadow = '0 4px 16px rgba(101,164,209,0.18)'
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'rgba(101,164,209,0.07)'
-              e.currentTarget.style.borderColor = 'rgba(101,164,209,0.35)'
-              e.currentTarget.style.transform = 'translateY(0)'
-              e.currentTarget.style.boxShadow = 'none'
-            }}
-            onMouseDown={(e) => { e.currentTarget.style.transform = 'scale(0.99)' }}
-            onMouseUp={(e) => { e.currentTarget.style.transform = 'translateY(-1px)' }}
-          >
-            <Shield size={20} style={{ flexShrink: 0 }} />
-            <div style={{ flex: 1 }}>
-              <div>Demo Access</div>
-              <div style={{ fontSize: 11, fontWeight: 400, opacity: 0.65, marginTop: 2 }}>
-                Sets demo credentials and opens the command center
-              </div>
-            </div>
-          </button>
-
-          {/* Tertiary — neutral */}
-          <a
-            href="/sign-in"
-            style={{
-              display: 'flex', alignItems: 'center', gap: 14,
-              width: '100%',
-              background: 'transparent',
-              border: '1.5px solid rgba(90,74,68,0.14)',
-              color: '#5A4A44',
-              fontSize: 15, fontWeight: 600,
-              padding: '16px 22px',
-              borderRadius: 12,
-              textDecoration: 'none',
-              boxSizing: 'border-box',
-              transition: 'all 180ms ease',
-              letterSpacing: '-0.01em',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.borderColor = 'rgba(90,74,68,0.28)'
-              e.currentTarget.style.background = 'rgba(90,74,68,0.04)'
-              e.currentTarget.style.transform = 'translateY(-1px)'
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.borderColor = 'rgba(90,74,68,0.14)'
-              e.currentTarget.style.background = 'transparent'
-              e.currentTarget.style.transform = 'translateY(0)'
-            }}
-          >
-            <LogIn size={20} style={{ flexShrink: 0 }} />
-            <div style={{ flex: 1 }}>
-              <div>Enter Command Center</div>
-              <div style={{ fontSize: 11, fontWeight: 400, opacity: 0.55, marginTop: 2 }}>
-                Login with operator or guard credentials
-              </div>
-            </div>
-          </a>
         </motion.div>
 
-        {/* Azure badges row */}
+        {/* Tech badges row */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -360,9 +160,7 @@ export default function LandingPage() {
         >
           {[
             { label: 'Azure AI Foundry', color: '#0078D4' },
-            { label: 'GPT-4 Vision',     color: '#0078D4' },
-            { label: 'Torchreid OSNet',  color: '#5A7B12' },
-            { label: 'Azure SignalR',    color: '#65A4D1' },
+            { label: 'Azure AI Vision',  color: '#0078D4' },
           ].map(({ label, color }) => (
             <span key={label} style={{
               display: 'inline-flex', alignItems: 'center', gap: 4,
@@ -439,19 +237,6 @@ export default function LandingPage() {
         @keyframes blobFloat4 {
           0%, 100% { transform: translate(0,0) scale(1); }
           50%       { transform: translate(14px, -10px) scale(1.05); }
-        }
-
-        @keyframes floatCard1 {
-          0%, 100% { transform: translateY(0); }
-          50%       { transform: translateY(-8px); }
-        }
-        @keyframes floatCard2 {
-          0%, 100% { transform: translateY(0) rotate(0deg); }
-          50%       { transform: translateY(-6px) rotate(0.5deg); }
-        }
-        @keyframes floatCard3 {
-          0%, 100% { transform: translateY(0); }
-          50%       { transform: translateY(-10px); }
         }
 
         @keyframes blink {

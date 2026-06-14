@@ -187,7 +187,7 @@ export default function CCTVPage() {
               }}
               onMouseLeave={(e) => { e.currentTarget.style.boxShadow = 'none' }}
             >
-              <CameraFeedCard camera={camera} videoSrc={camera.videoSrc} />
+              <CameraFeedCard camera={camera} videoSrc={camera.videoSrc} hideAlerts />
             </div>
           ))}
         </div>

@@ -427,7 +427,7 @@ function DemoDataTab() {
           color: 'var(--color-text-secondary)',
         }}
       >
-        All footage is synthetic. No real child data. For hackathon demonstration only.
+        All footage is synthetic. No real child data. For portfolio demonstration only.
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>

@@ -7,6 +7,7 @@ import type { Camera, CameraStatus } from '@/lib/types'
 interface Props {
   camera: Camera
   videoSrc?: string
+  hideAlerts?: boolean
 }
 
 const STATUS_COLOR: Record<CameraStatus, string> = {
@@ -30,10 +31,12 @@ function getTimestamp(): string {
   return `${date} ${time}`
 }
 
-export default function CameraFeedCard({ camera, videoSrc: videoSrcProp }: Props) {
-  const isAlert = camera.status === 'match' || camera.status === 'high_risk'
+export default function CameraFeedCard({ camera, videoSrc: videoSrcProp, hideAlerts = false }: Props) {
+  const rawIsAlert = camera.status === 'match' || camera.status === 'high_risk'
+  const isAlert = rawIsAlert && !hideAlerts
   const isOffline = camera.status === 'offline'
-  const color = STATUS_COLOR[camera.status]
+  const displayStatus = hideAlerts && rawIsAlert ? 'live' : camera.status
+  const color = STATUS_COLOR[displayStatus]
   // Explicit prop takes priority; fall back to camera object's videoSrc field
   const videoSrc = videoSrcProp ?? camera.videoSrc
 
@@ -254,7 +257,7 @@ export default function CameraFeedCard({ camera, videoSrc: videoSrcProp }: Props
               letterSpacing: '0.08em', color, flexShrink: 0,
             }}
           >
-            {STATUS_LABEL[camera.status]}
+            {STATUS_LABEL[displayStatus]}
           </span>
         </div>
       </div>
