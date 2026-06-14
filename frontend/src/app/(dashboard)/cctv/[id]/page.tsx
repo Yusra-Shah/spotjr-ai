@@ -102,8 +102,10 @@ export default function SingleCameraPage({ params }: { params: { id: string } })
   const [overlayStep, setOverlayStep] = useState(0)
   const [parsedQuery, setParsedQuery] = useState('')
   const [apiResults, setApiResults] = useState<{ matches: RealMatch[]; query_parsed: string } | null>(null)
+  const [searchError, setSearchError] = useState<string | null>(null)
 
-  const cameraData = mockCameras.find(c => c.id === cameraId)
+  // Case-insensitive lookup so both /cctv/CAM-06 and /cctv/cam-06 resolve correctly
+  const cameraData = mockCameras.find(c => c.id.toUpperCase() === params.id.toUpperCase())
   const videoSrc = cameraData?.videoSrc
 
   // ── Start in-frame scan animation ────────────────────────────────────────
@@ -130,15 +132,24 @@ export default function SingleCameraPage({ params }: { params: { id: string } })
     push(() => setScanStep(9), 5700)          // complete
   }
 
-  // Auto-trigger scan on mount
+  // Reset and restart scan whenever the camera ID changes (handles Next.js component reuse
+  // across /cctv/CAM-01 → /cctv/CAM-06 navigations where the component is NOT unmounted).
   useEffect(() => {
+    timerRefs.current.forEach(clearTimeout)
+    timerRefs.current = []
+    setScanStep(0)
+    setScanConf(0)
+    setShowResults(false)
+    setApiResults(null)
+    setSearchError(null)
     const t = setTimeout(startScan, 600)
+    timerRefs.current.push(t)
     return () => {
       clearTimeout(t)
       timerRefs.current.forEach(clearTimeout)
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [params.id])
 
   // Confidence counter — runs during each "analyzing" phase
   useEffect(() => {
@@ -172,6 +183,7 @@ export default function SingleCameraPage({ params }: { params: { id: string } })
       } else {
         // Animation finished — call real backend, then reveal results
         setTimeout(async () => {
+          setSearchError(null)
           try {
             const resp = await fetch(`${BACKEND}/api/cases/CASE-A-001/search`, {
               method: 'POST',
@@ -182,9 +194,11 @@ export default function SingleCameraPage({ params }: { params: { id: string } })
               const data = await resp.json()
               setApiResults(data)
               if (data.query_parsed) setParsedQuery(data.query_parsed)
+            } else {
+              setSearchError(`Backend error ${resp.status} — showing cached results`)
             }
           } catch {
-            // Backend unavailable — MOCK_RESULTS are shown as fallback
+            setSearchError('Backend unavailable — showing cached results')
           }
           setIsSearching(false)
           setShowResults(true)
@@ -471,99 +485,113 @@ export default function SingleCameraPage({ params }: { params: { id: string } })
             </button>
           </div>
 
-          {/* Results */}
-          <AnimatePresence>
-            {showResults && (() => {
-              // Normalize real API results or fall back to mock
-              const displayResults: SearchResult[] = apiResults
-                ? apiResults.matches.map(m => ({
-                    cameraId: m.camera_id,
-                    time: 'LIVE',
-                    confidence: m.match_score,
-                    description: m.ai_description,
-                    cropUrl: m.crop_url,
-                  }))
-                : MOCK_RESULTS
-              const reidCams = displayResults.map(r => r.cameraId)
-              const isReal = !!apiResults
+          {/* Results — computed outside JSX so AnimatePresence gets a stable React element */}
+          {(() => {
+            const isReal = !!apiResults
+            const displayResults: SearchResult[] = isReal
+              ? apiResults!.matches.map(m => ({
+                  cameraId: m.camera_id,           // uppercase e.g. "CAM-11"
+                  time: 'LIVE',
+                  confidence: m.match_score,
+                  description: m.ai_description,
+                  cropUrl: m.crop_url,
+                }))
+              : MOCK_RESULTS
+            const reidCams = displayResults.map(r => r.cameraId)
 
-              return (
-                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} style={{ padding: '0 12px 12px', flexShrink: 0 }}>
-                  <div style={{ padding: '8px 12px', borderRadius: 6, background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.25)', marginBottom: 10 }}>
-                    <div style={{ fontSize: 12, fontWeight: 700, color: '#10B981', marginBottom: 3 }}>
-                      {displayResults.length} possible match{displayResults.length !== 1 ? 'es' : ''} found{isReal ? ' · Azure AI' : ' across 6 cameras'}
+            return (
+              <AnimatePresence>
+                {showResults && (
+                  <motion.div
+                    key="search-results"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -6 }}
+                    style={{ padding: '0 12px 12px', flexShrink: 0 }}
+                  >
+                    {searchError && (
+                      <div style={{ padding: '6px 10px', borderRadius: 5, background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.3)', marginBottom: 8, fontSize: 10, color: '#F59E0B', fontFamily: 'monospace' }}>
+                        {searchError}
+                      </div>
+                    )}
+                    <div style={{ padding: '8px 12px', borderRadius: 6, background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.25)', marginBottom: 10 }}>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: '#10B981', marginBottom: 3 }}>
+                        {displayResults.length} possible match{displayResults.length !== 1 ? 'es' : ''} found{isReal ? ' · Azure AI' : ' across 6 cameras'}
+                      </div>
+                      <div style={{ fontSize: 10, color: 'var(--color-text-muted)' }}>Query matched: {parsedQuery}</div>
                     </div>
-                    <div style={{ fontSize: 10, color: 'var(--color-text-muted)' }}>Query matched: {parsedQuery}</div>
-                  </div>
-                  {/* Re-ID chain */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '6px 10px', borderRadius: 5, marginBottom: 10, background: 'rgba(6,182,212,0.06)', border: '1px solid rgba(6,182,212,0.2)', flexWrap: 'wrap' }}>
-                    <span style={{ fontSize: 9, fontFamily: 'monospace', color: 'var(--color-text-muted)', marginRight: 4 }}>Re-ID Chain:</span>
-                    {reidCams.map((cam, i, arr) => (
-                      <span key={cam + i} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                        <span style={{ fontSize: 10, fontFamily: 'monospace', fontWeight: 700, color: '#06B6D4', background: 'rgba(6,182,212,0.12)', border: '1px solid rgba(6,182,212,0.25)', padding: '1px 5px', borderRadius: 3 }}>{cam}</span>
-                        {i < arr.length - 1 && <ChevronRight size={10} style={{ color: 'var(--color-text-muted)' }} />}
-                      </span>
-                    ))}
-                  </div>
-                  {/* Result cards */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                    {displayResults.map((result, ri) => {
-                      const bc = confColor(result.confidence)
-                      return (
-                        <div key={result.cameraId + ri} style={{ borderRadius: 7, border: '1px solid var(--color-border-subtle)', borderLeft: `3px solid ${bc}`, background: 'var(--color-bg-elevated)', overflow: 'hidden' }}>
-                          {/* Crop image (real) or placeholder (mock) */}
-                          {result.cropUrl ? (
-                            <div style={{ position: 'relative', background: '#060A14' }}>
-                              <img
-                                src={`${BACKEND}${result.cropUrl}`}
-                                alt={`${result.cameraId} crop`}
-                                style={{ width: '100%', height: 80, objectFit: 'cover', display: 'block', opacity: 0.92 }}
-                                onError={e => { (e.target as HTMLImageElement).style.display = 'none' }}
-                              />
-                              <div style={{ position: 'absolute', top: 4, right: 4, background: bc, color: '#000', fontSize: 8, fontFamily: 'monospace', fontWeight: 800, padding: '1px 5px', borderRadius: 2 }}>{result.confidence}%</div>
-                              <div style={{ position: 'absolute', bottom: 4, left: 4, fontSize: 8, fontFamily: 'monospace', color: '#06B6D4', background: 'rgba(0,0,0,0.7)', padding: '1px 4px', borderRadius: 2 }}>{result.cameraId}</div>
-                            </div>
-                          ) : (
-                            <div style={{ height: 52, background: '#060A14', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                              <div style={{ position: 'absolute', left: '30%', bottom: '8%', width: '16%', height: '75%', border: `1.5px solid ${bc}`, borderRadius: 2, boxShadow: `0 0 6px ${bc}66` }} />
-                              <span style={{ fontSize: 8, color: 'var(--color-text-muted)', fontFamily: 'monospace' }}>FRAME · {result.time}</span>
-                              <div style={{ position: 'absolute', top: 4, right: 4, background: bc, color: '#000', fontSize: 8, fontFamily: 'monospace', fontWeight: 800, padding: '1px 5px', borderRadius: 2 }}>{result.confidence}%</div>
-                              <div style={{ position: 'absolute', bottom: 4, left: 4, fontSize: 8, fontFamily: 'monospace', color: '#06B6D4', background: 'rgba(0,0,0,0.7)', padding: '1px 4px', borderRadius: 2 }}>{result.cameraId}</div>
-                            </div>
-                          )}
-                          <div style={{ padding: '8px 10px' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                              <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-text-primary)', fontFamily: 'monospace' }}>{result.cameraId}</span>
-                              <span style={{ fontSize: 10, fontFamily: 'monospace', color: 'var(--color-text-muted)' }}>{result.time}</span>
-                            </div>
-                            <div style={{ marginBottom: 5 }}>
-                              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2 }}>
-                                <span style={{ fontSize: 9, color: 'var(--color-text-muted)' }}>Confidence</span>
-                                <span style={{ fontSize: 9, fontFamily: 'monospace', fontWeight: 700, color: bc }}>{result.confidence}%</span>
+                    {/* Re-ID chain */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '6px 10px', borderRadius: 5, marginBottom: 10, background: 'rgba(6,182,212,0.06)', border: '1px solid rgba(6,182,212,0.2)', flexWrap: 'wrap' }}>
+                      <span style={{ fontSize: 9, fontFamily: 'monospace', color: 'var(--color-text-muted)', marginRight: 4 }}>Re-ID Chain:</span>
+                      {reidCams.map((cam, i) => (
+                        <span key={cam + i} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <span style={{ fontSize: 10, fontFamily: 'monospace', fontWeight: 700, color: '#06B6D4', background: 'rgba(6,182,212,0.12)', border: '1px solid rgba(6,182,212,0.25)', padding: '1px 5px', borderRadius: 3 }}>{cam}</span>
+                          {i < reidCams.length - 1 && <ChevronRight size={10} style={{ color: 'var(--color-text-muted)' }} />}
+                        </span>
+                      ))}
+                    </div>
+                    {/* Result cards */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      {displayResults.map((result, ri) => {
+                        const bc = confColor(result.confidence)
+                        // Navigate using the camera_id as-is from backend (CAM-11)
+                        // The target page normalises via .toUpperCase() so both cases work
+                        const navTarget = '/cctv/' + result.cameraId.toLowerCase()
+                        return (
+                          <div key={result.cameraId + ri} style={{ borderRadius: 7, border: '1px solid var(--color-border-subtle)', borderLeft: `3px solid ${bc}`, background: 'var(--color-bg-elevated)', overflow: 'hidden' }}>
+                            {result.cropUrl ? (
+                              <div style={{ position: 'relative', background: '#060A14' }}>
+                                <img
+                                  src={`${BACKEND}${result.cropUrl}`}
+                                  alt={`${result.cameraId} crop`}
+                                  style={{ width: '100%', height: 80, objectFit: 'cover', display: 'block', opacity: 0.92 }}
+                                  onError={e => { (e.target as HTMLImageElement).style.display = 'none' }}
+                                />
+                                <div style={{ position: 'absolute', top: 4, right: 4, background: bc, color: '#000', fontSize: 8, fontFamily: 'monospace', fontWeight: 800, padding: '1px 5px', borderRadius: 2 }}>{result.confidence}%</div>
+                                <div style={{ position: 'absolute', bottom: 4, left: 4, fontSize: 8, fontFamily: 'monospace', color: '#06B6D4', background: 'rgba(0,0,0,0.7)', padding: '1px 4px', borderRadius: 2 }}>{result.cameraId}</div>
                               </div>
-                              <div style={{ height: 3, borderRadius: 2, background: 'var(--color-border-subtle)', overflow: 'hidden' }}>
-                                <div style={{ height: '100%', width: `${result.confidence}%`, background: bc, borderRadius: 2 }} />
+                            ) : (
+                              <div style={{ height: 52, background: '#060A14', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <div style={{ position: 'absolute', left: '30%', bottom: '8%', width: '16%', height: '75%', border: `1.5px solid ${bc}`, borderRadius: 2, boxShadow: `0 0 6px ${bc}66` }} />
+                                <span style={{ fontSize: 8, color: 'var(--color-text-muted)', fontFamily: 'monospace' }}>FRAME · {result.time}</span>
+                                <div style={{ position: 'absolute', top: 4, right: 4, background: bc, color: '#000', fontSize: 8, fontFamily: 'monospace', fontWeight: 800, padding: '1px 5px', borderRadius: 2 }}>{result.confidence}%</div>
+                                <div style={{ position: 'absolute', bottom: 4, left: 4, fontSize: 8, fontFamily: 'monospace', color: '#06B6D4', background: 'rgba(0,0,0,0.7)', padding: '1px 4px', borderRadius: 2 }}>{result.cameraId}</div>
                               </div>
+                            )}
+                            <div style={{ padding: '8px 10px' }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                                <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-text-primary)', fontFamily: 'monospace' }}>{result.cameraId}</span>
+                                <span style={{ fontSize: 10, fontFamily: 'monospace', color: 'var(--color-text-muted)' }}>{result.time}</span>
+                              </div>
+                              <div style={{ marginBottom: 5 }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2 }}>
+                                  <span style={{ fontSize: 9, color: 'var(--color-text-muted)' }}>Confidence</span>
+                                  <span style={{ fontSize: 9, fontFamily: 'monospace', fontWeight: 700, color: bc }}>{result.confidence}%</span>
+                                </div>
+                                <div style={{ height: 3, borderRadius: 2, background: 'var(--color-border-subtle)', overflow: 'hidden' }}>
+                                  <div style={{ height: '100%', width: `${result.confidence}%`, background: bc, borderRadius: 2 }} />
+                                </div>
+                              </div>
+                              <div style={{ fontSize: 10, color: 'var(--color-text-muted)', marginBottom: 7, lineHeight: 1.4 }}>{result.description}</div>
+                              <button
+                                onClick={() => { window.location.href = navTarget }}
+                                style={{ width: '100%', padding: '5px 0', borderRadius: 5, background: 'rgba(6,182,212,0.1)', border: '1px solid rgba(6,182,212,0.3)', color: '#06B6D4', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}
+                              >
+                                View Camera
+                              </button>
                             </div>
-                            <div style={{ fontSize: 10, color: 'var(--color-text-muted)', marginBottom: 7, lineHeight: 1.4 }}>{result.description}</div>
-                            <button
-                              onClick={() => { window.location.href = '/cctv/' + result.cameraId.toLowerCase() }}
-                              style={{ width: '100%', padding: '5px 0', borderRadius: 5, background: 'rgba(6,182,212,0.1)', border: '1px solid rgba(6,182,212,0.3)', color: '#06B6D4', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}
-                            >
-                              View Camera
-                            </button>
                           </div>
-                        </div>
-                      )
-                    })}
-                  </div>
-                  <div style={{ marginTop: 10, fontSize: 9, fontFamily: 'monospace', color: '#8B5CF6', textAlign: 'center', letterSpacing: '0.04em' }}>
-                    {isReal ? 'Azure AI Vision + GPT-4o · Real inference' : 'Powered by Azure AI Foundry + Foundry IQ'}
-                  </div>
-                </motion.div>
-              )
-            })()}
-          </AnimatePresence>
+                        )
+                      })}
+                    </div>
+                    <div style={{ marginTop: 10, fontSize: 9, fontFamily: 'monospace', color: '#8B5CF6', textAlign: 'center', letterSpacing: '0.04em' }}>
+                      {isReal ? 'Azure AI Vision + Azure AI Caption · Real inference' : 'Powered by Azure AI Foundry + Foundry IQ'}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            )
+          })()}
 
           {/* Camera metadata */}
           <div style={{ margin: '0 12px 12px', padding: 12, background: 'var(--color-bg-inset)', borderRadius: 8, border: '1px solid var(--color-border-subtle)', flexShrink: 0 }}>

@@ -17,7 +17,7 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { label: 'Dashboard',   href: '/',            icon: LayoutDashboard, section: 'OPERATIONS' },
+  { label: 'Dashboard',   href: '/dashboard',    icon: LayoutDashboard, section: 'OPERATIONS' },
   {
     label: 'Cases',       href: '/cases',        icon: FolderOpen,
     sub: [

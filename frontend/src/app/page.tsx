@@ -186,7 +186,7 @@ export default function LandingPage() {
               width: 6, height: 6, borderRadius: '50%', background: '#A20022',
               display: 'inline-block', animation: 'blink 1.4s ease-in-out infinite',
             }} />
-            Microsoft Agents League Hackathon 2026
+            Child Safety AI &nbsp;·&nbsp; Portfolio Demo
           </span>
         </motion.div>
 
@@ -222,7 +222,7 @@ export default function LandingPage() {
             AI-Powered Missing Child Detection System
           </p>
           <p style={{ fontSize: 12, color: '#B0A09A', margin: 0, letterSpacing: '0.02em' }}>
-            Reasoning Agents Track &nbsp;·&nbsp; Powered by Azure AI Foundry
+            Multi-agent detection &nbsp;·&nbsp; Powered by Azure AI Foundry
           </p>
         </motion.div>
 
@@ -385,10 +385,6 @@ export default function LandingPage() {
           style={{ textAlign: 'center', color: '#B0A09A', fontSize: 11, marginTop: 18, lineHeight: 1.65 }}
         >
           All demo data is synthetic · No real child data or PII used
-          <br />
-          <span style={{ fontFamily: 'monospace', fontSize: 10, color: '#C0B0AA' }}>
-            operator / spotjr2026 &nbsp;·&nbsp; guard / spotjr2026
-          </span>
         </motion.p>
       </div>
 
