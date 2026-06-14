@@ -560,7 +560,7 @@ function ListView({
             </div>
             <div style={{ padding: '12px 12px' }}>
               <button
-                onClick={onViewReport}
+                onClick={() => { window.location.href = '/incidents/' + row.caseId }}
                 style={{
                   padding: '5px 12px',
                   borderRadius: 5,

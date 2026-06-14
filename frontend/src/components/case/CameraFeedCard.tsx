@@ -239,27 +239,15 @@ export default function CameraFeedCard({ camera, videoSrc: videoSrcProp }: Props
           )}
         </div>
 
-        {/* ── Bottom bar: zone + status ──────────────────────────────────── */}
+        {/* ── Bottom bar: status only (zone removed to avoid conflicting with video) */}
         <div
           style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            display: 'flex', alignItems: 'center', justifyContent: 'flex-end',
             padding: '4px 7px',
             background: 'rgba(0,0,0,0.6)',
             borderTop: '1px solid rgba(255,255,255,0.04)',
           }}
         >
-          <span
-            style={{
-              fontFamily: 'monospace', fontSize: 9,
-              color: isOffline ? '#475569' : '#22c55e',
-              letterSpacing: '0.03em',
-              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-              maxWidth: '65%',
-            }}
-          >
-            {camera.zone}
-          </span>
-
           <span
             style={{
               fontFamily: 'monospace', fontSize: 8, fontWeight: 700,

@@ -7,6 +7,10 @@ import { mockCameras, mockCase } from '@/lib/mock-data'
 import CameraFeedCard from '@/components/case/CameraFeedCard'
 import type { Camera } from '@/lib/types'
 
+function goToCamera(id: string) {
+  window.location.href = '/cctv/' + id
+}
+
 // ── Offline placeholder cameras to fill remaining grid slots ──────────────────
 const OFFLINE_CAMERAS: Camera[] = [
   { id: 'CAM-07', name: 'Toy Zone North',  zone: 'Toy Zone',       status: 'offline' },
@@ -185,7 +189,22 @@ export default function CCTVPage() {
           }}
         >
           {filled.map((camera) => (
-            <CameraFeedCard key={camera.id} camera={camera} videoSrc={camera.videoSrc} />
+            <div
+              key={camera.id}
+              onClick={() => camera.status !== 'offline' && goToCamera(camera.id)}
+              style={{
+                cursor: camera.status !== 'offline' ? 'pointer' : 'default',
+                borderRadius: 6,
+                transition: 'box-shadow 150ms',
+              }}
+              onMouseEnter={(e) => {
+                if (camera.status !== 'offline')
+                  e.currentTarget.style.boxShadow = '0 0 0 1.5px rgba(6,182,212,0.5)'
+              }}
+              onMouseLeave={(e) => { e.currentTarget.style.boxShadow = 'none' }}
+            >
+              <CameraFeedCard camera={camera} videoSrc={camera.videoSrc} />
+            </div>
           ))}
         </div>
       </div>

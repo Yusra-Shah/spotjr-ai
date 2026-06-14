@@ -41,7 +41,7 @@ function ActiveCaseCard({ activeCase }: { activeCase: Case }) {
   const badge = riskBadgeStyle[activeCase.riskLevel]
 
   return (
-    <Link href="/cases/demo-001" style={{ textDecoration: 'none', display: 'block' }}>
+    <Link href="/cases/CASE-A-001" style={{ textDecoration: 'none', display: 'block' }}>
       <div
         style={{
           borderRadius: 10,
