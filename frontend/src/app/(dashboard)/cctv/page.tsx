@@ -5,21 +5,10 @@ import Link from 'next/link'
 import { ArrowLeft, Video } from 'lucide-react'
 import { mockCameras, mockCase } from '@/lib/mock-data'
 import CameraFeedCard from '@/components/case/CameraFeedCard'
-import type { Camera } from '@/lib/types'
 
 function goToCamera(id: string) {
   window.location.href = '/cctv/' + id
 }
-
-// ── Offline placeholder cameras to fill remaining grid slots ──────────────────
-const OFFLINE_CAMERAS: Camera[] = [
-  { id: 'CAM-07', name: 'Toy Zone North',  zone: 'Toy Zone',       status: 'offline' },
-  { id: 'CAM-08', name: 'Restrooms',        zone: 'Restrooms',      status: 'offline' },
-  { id: 'CAM-09', name: 'Back Corridor',    zone: 'Back Corridor',  status: 'offline' },
-  { id: 'CAM-10', name: 'Parking East',     zone: 'Parking East',   status: 'offline' },
-  { id: 'CAM-11', name: 'Loading Dock',     zone: 'Loading Dock',   status: 'offline' },
-  { id: 'CAM-12', name: 'Staff Entrance',   zone: 'Staff Entrance', status: 'offline' },
-]
 
 type GridKey = '2x2' | '3x3' | '4x3'
 
@@ -37,14 +26,9 @@ export default function CCTVPage() {
 
   const { cols, slots } = GRID_CONFIGS[grid]
 
-  // Sort cameras by priority and fill grid slots with offline placeholders
-  const sorted = [...mockCameras].sort(
-    (a, b) => (STATUS_ORDER[a.status] ?? 3) - (STATUS_ORDER[b.status] ?? 3),
-  )
-  const filled: Camera[] = [
-    ...sorted,
-    ...OFFLINE_CAMERAS,
-  ].slice(0, slots)
+  const filled = [...mockCameras]
+    .sort((a, b) => (STATUS_ORDER[a.status] ?? 3) - (STATUS_ORDER[b.status] ?? 3))
+    .slice(0, slots)
 
   return (
     <div
@@ -143,7 +127,7 @@ export default function CCTVPage() {
           CCTV Wall
         </span>
         <span style={{ fontSize: 11, color: 'var(--color-text-muted)', fontFamily: 'monospace' }}>
-          {mockCameras.filter((c) => c.status !== 'offline').length}/{mockCameras.length + OFFLINE_CAMERAS.length} online
+          {mockCameras.filter((c) => c.status !== 'offline').length}/{mockCameras.length} online
         </span>
 
         <div style={{ flex: 1 }} />

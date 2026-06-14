@@ -63,6 +63,48 @@ export const mockCameras: Camera[] = [
     confidence: 89,
     videoSrc: '/videos/cam-06.mp4',
   },
+  {
+    id: 'CAM-07',
+    name: 'Parking Level 1',
+    zone: 'Parking Level 1',
+    status: 'live',
+    videoSrc: '/videos/cam-07.mp4',
+  },
+  {
+    id: 'CAM-08',
+    name: 'Toy Zone',
+    zone: 'Toy Zone',
+    status: 'live',
+    videoSrc: '/videos/cam-08.mp4',
+  },
+  {
+    id: 'CAM-09',
+    name: 'Restrooms Corridor',
+    zone: 'Restrooms Corridor',
+    status: 'live',
+    videoSrc: '/videos/cam-09.mp4',
+  },
+  {
+    id: 'CAM-10',
+    name: 'Escalator South',
+    zone: 'Escalator South',
+    status: 'live',
+    videoSrc: '/videos/cam-10.mp4',
+  },
+  {
+    id: 'CAM-11',
+    name: 'Back Corridor',
+    zone: 'Back Corridor',
+    status: 'live',
+    videoSrc: '/videos/cam-11.mp4',
+  },
+  {
+    id: 'CAM-12',
+    name: 'Loading Dock',
+    zone: 'Loading Dock',
+    status: 'live',
+    videoSrc: '/videos/cam-12.mp4',
+  },
 ]
 
 export const mockGuards: Guard[] = [

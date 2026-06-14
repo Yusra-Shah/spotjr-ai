@@ -1026,7 +1026,7 @@ export default function NewCasePage() {
           Complete quickly — every second matters.
         </p>
 
-        <StepIndicator />
+        {StepIndicator()}
 
         {/* Form card */}
         <div
@@ -1038,9 +1038,9 @@ export default function NewCasePage() {
             marginBottom: 16,
           }}
         >
-          {step === 1 && <Step1 />}
-          {step === 2 && <Step2 />}
-          {step === 3 && <Step3 />}
+          {step === 1 && Step1()}
+          {step === 2 && Step2()}
+          {step === 3 && Step3()}
         </div>
 
         {/* Navigation buttons */}

@@ -2,11 +2,12 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, Check, X, AlertTriangle, User, Navigation, ChevronRight, Clock, Map, Camera } from 'lucide-react'
+import { ArrowLeft, Check, X, AlertTriangle, User, Navigation, ChevronRight, Clock, Map, Camera, Plus } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
 import MallDigitalTwin from '@/components/map/MallDigitalTwin'
 import RiskScoreIndicator from '@/components/case/RiskScoreIndicator'
 import AIReasoningTimeline from '@/components/ai/AIReasoningTimeline'
-import { mockCase, mockTimeline, mockGuards } from '@/lib/mock-data'
+import { mockCase, mockTimeline, mockGuards, mockCameras } from '@/lib/mock-data'
 import { getCase, createCaseWebSocket } from '@/lib/api'
 import type { Case, TimelineEvent } from '@/lib/types'
 
@@ -17,7 +18,7 @@ interface DetectionMatch {
   zone: string
   time: string
   confidence: number
-  status: 'pending' | 'confirmed' | 'rejected'
+  status: 'scanning' | 'pending' | 'confirmed' | 'rejected'
 }
 
 const INITIAL_MATCHES: DetectionMatch[] = [
@@ -37,13 +38,30 @@ function DetectionMatchCard({
 }) {
   const isHigh = match.confidence >= 90
   const borderColor =
-    match.status === 'confirmed'
+    match.status === 'scanning'
+      ? 'rgba(6,182,212,0.5)'
+      : match.status === 'confirmed'
       ? 'var(--color-risk-medium)'
       : match.status === 'rejected'
       ? 'var(--color-border-default)'
       : isHigh
       ? 'var(--color-risk-critical)'
       : 'var(--color-risk-medium)'
+
+  if (match.status === 'scanning') {
+    return (
+      <div style={{ borderRadius: 8, border: `1px solid ${borderColor}`, background: 'var(--color-bg-elevated)', overflow: 'hidden', padding: '12px 10px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+          <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#06B6D4', animation: 'pulse 1.2s ease-in-out infinite', flexShrink: 0 }} />
+          <span style={{ fontSize: 11, fontWeight: 700, color: '#06B6D4', fontFamily: 'monospace' }}>{match.cameraId}</span>
+        </div>
+        <div style={{ fontSize: 10, color: 'var(--color-text-muted)', marginBottom: 6 }}>{match.zone} — scanning…</div>
+        <div style={{ height: 3, borderRadius: 2, background: 'rgba(6,182,212,0.12)', overflow: 'hidden' }}>
+          <div style={{ height: '100%', background: '#06B6D4', borderRadius: 2, animation: 'scanBar 1.4s ease-in-out infinite' }} />
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div
@@ -251,6 +269,7 @@ export default function CaseDetailPage({ params }: { params: { id: string } }) {
   const [liveRiskScore, setLiveRiskScore] = useState(mockCase.riskScore)
   const [matches, setMatches] = useState<DetectionMatch[]>(INITIAL_MATCHES)
   const [marked, setMarked] = useState(false)
+  const [showAddCamera, setShowAddCamera] = useState(false)
 
   // ── Custom hooks (called unconditionally) ─────────────────────────────────
   const elapsed = useElapsed(caseData.reportedAt)
@@ -287,6 +306,28 @@ export default function CaseDetailPage({ params }: { params: { id: string } }) {
 
   const handleReject = useCallback((id: string) => {
     setMatches((prev) => prev.map((m) => (m.id === id ? { ...m, status: 'rejected' as const } : m)))
+  }, [])
+
+  const handleAddCamera = useCallback((cameraId: string) => {
+    setShowAddCamera(false)
+    const cam = mockCameras.find(c => c.id === cameraId)
+    if (!cam) return
+    const newMatch: DetectionMatch = {
+      id: `M-${Date.now()}`,
+      cameraId: cam.id,
+      zone: cam.zone,
+      time: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+      confidence: 0,
+      status: 'scanning',
+    }
+    setMatches(prev => [...prev, newMatch])
+    setTimeout(() => {
+      setMatches(prev => prev.map(m =>
+        m.id === newMatch.id
+          ? { ...m, status: 'pending', confidence: Math.floor(Math.random() * 36) + 60 }
+          : m
+      ))
+    }, 2000)
   }, [])
 
   // ── Fetch case data on mount ──────────────────────────────────────────────
@@ -562,15 +603,62 @@ export default function CaseDetailPage({ params }: { params: { id: string } }) {
               padding: '10px 12px',
               borderBottom: '1px solid var(--color-border-subtle)',
               flexShrink: 0,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
             }}
           >
             <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--color-text-muted)', letterSpacing: '0.1em' }}>
               DETECTION MATCHES
             </span>
-            <span style={{ marginLeft: 8, fontSize: 10, fontFamily: 'monospace', color: 'var(--color-brand-cyan)' }}>
+            <span style={{ fontSize: 10, fontFamily: 'monospace', color: 'var(--color-brand-cyan)' }}>
               {matches.filter((m) => m.status !== 'rejected').length}/{matches.length}
             </span>
+            <button
+              onClick={() => setShowAddCamera(true)}
+              style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 4, padding: '3px 8px', borderRadius: 4, background: 'rgba(6,182,212,0.1)', border: '1px solid rgba(6,182,212,0.3)', color: '#06B6D4', fontSize: 10, fontWeight: 600, cursor: 'pointer' }}
+            >
+              <Plus size={10} /> Add Camera
+            </button>
           </div>
+
+          {/* Camera picker modal */}
+          <AnimatePresence>
+            {showAddCamera && (
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(4,7,18,0.7)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                onClick={() => setShowAddCamera(false)}
+              >
+                <motion.div initial={{ scale: 0.96, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.96, opacity: 0 }}
+                  onClick={e => e.stopPropagation()}
+                  style={{ width: 320, background: 'var(--color-bg-surface)', borderRadius: 10, border: '1px solid var(--color-border-default)', overflow: 'hidden' }}
+                >
+                  <div style={{ padding: '12px 14px', borderBottom: '1px solid var(--color-border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--color-text-primary)' }}>Add Camera to Search</span>
+                    <button onClick={() => setShowAddCamera(false)} style={{ background: 'none', border: 'none', color: 'var(--color-text-muted)', cursor: 'pointer', fontSize: 16, lineHeight: 1 }}>×</button>
+                  </div>
+                  <div style={{ padding: 10, display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 320, overflowY: 'auto' }}>
+                    {mockCameras
+                      .filter(c => !matches.some(m => m.cameraId === c.id && m.status !== 'rejected'))
+                      .map(cam => (
+                        <button key={cam.id} onClick={() => handleAddCamera(cam.id)}
+                          style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', borderRadius: 6, background: 'var(--color-bg-elevated)', border: '1px solid var(--color-border-subtle)', cursor: 'pointer', textAlign: 'left', width: '100%' }}
+                        >
+                          <div style={{ width: 8, height: 8, borderRadius: '50%', background: cam.status === 'offline' ? '#475569' : '#10B981', flexShrink: 0 }} />
+                          <div>
+                            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-text-primary)', fontFamily: 'monospace' }}>{cam.id}</div>
+                            <div style={{ fontSize: 10, color: 'var(--color-text-muted)' }}>{cam.zone}</div>
+                          </div>
+                          <div style={{ marginLeft: 'auto', fontSize: 9, color: cam.status === 'offline' ? '#475569' : '#10B981', fontFamily: 'monospace', fontWeight: 700 }}>
+                            {cam.status.toUpperCase()}
+                          </div>
+                        </button>
+                      ))}
+                  </div>
+                </motion.div>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           <div style={{ padding: 10, display: 'flex', flexDirection: 'column', gap: 10 }}>
             {matches.map((m) => (
@@ -826,6 +914,14 @@ export default function CaseDetailPage({ params }: { params: { id: string } }) {
       >
         <AIReasoningTimeline events={timeline} />
       </div>
+
+      <style>{`
+        @keyframes scanBar {
+          0%   { width: 0%;    margin-left: 0%; }
+          50%  { width: 60%;   margin-left: 20%; }
+          100% { width: 0%;    margin-left: 100%; }
+        }
+      `}</style>
     </div>
   )
 }
